@@ -1,8 +1,12 @@
 # Render Blueprint — https://render.com/docs/blueprint-spec
+# If deploy still fails, set Start Command to `npm start` in the dashboard (see RENDER_DEPLOY.md).
 services:
   - type: web
     name: razor-backend
     runtime: node
-    buildCommand: npm install && npm run build && npm run db:deploy:render
+    buildCommand: NPM_CONFIG_PRODUCTION=false npm install && npm run build && npm run db:deploy:render
     startCommand: npm start
     healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
