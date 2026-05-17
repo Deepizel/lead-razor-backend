@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  offering  String
+  statement String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  leads     Lead[]
+
+  @@map("categories")
+}
+
+model Lead {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  categoryId       String?   @map("category_id") @db.Uuid
+  firstName        String    @map("first_name") @db.VarChar(100)
+  lastName         String    @map("last_name") @db.VarChar(100)
+  email            String    @unique @db.VarChar(255)
+  company          String?   @db.VarChar(255)
+  jobTitle         String?   @map("job_title") @db.VarChar(255)
+  phone            String?   @db.VarChar(50)
+  source           String?   @db.VarChar(100)
+  initialMessage   String?   @map("initial_message")
+  score            Int       @default(0)
+  tier             String    @default("cold") @db.VarChar(10)
+  emailsSent       Int       @default(0) @map("emails_sent")
+  emailsOpened     Int       @default(0) @map("emails_opened")
+  linksClicked     Int       @default(0) @map("links_clicked")
+  repliesReceived  Int       @default(0) @map("replies_received")
+  bookingClicks    Int       @default(0) @map("booking_clicks")
+  lastEventAt      DateTime? @map("last_event_at") @db.Timestamptz(6)
+  lastEventType    String?   @map("last_event_type") @db.VarChar(50)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  category Category?     @relation(fields: [categoryId], references: [id])
+  snapshot LeadSnapshot?
+
+  @@map("leads")
+}
+
+model LeadSnapshot {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leadId                String    @unique @map("lead_id") @db.Uuid
+  currentScore          Int       @map("current_score")
+  summary               String
+  currentIntent         String    @map("current_intent") @db.VarChar(20)
+  lastMeaningfulEvent   String?   @map("last_meaningful_event") @db.VarChar(50)
+  suggestedEmailSubject String?   @map("suggested_email_subject")
+  suggestedEmailBody    String?   @map("suggested_email_body")
+  suggestedEmailSentAt  DateTime? @map("suggested_email_sent_at") @db.Timestamptz(6)
+  llmModel              String?   @map("llm_model") @db.VarChar(100)
+  tokenCost             Int?      @map("token_cost")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_snapshots")
+}

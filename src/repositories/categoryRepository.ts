@@ -1,4 +1,5 @@
-import { getPool } from "../db/pool";
+import { prisma } from "../db/prisma";
+import { toCategoryDto } from "../lib/prismaMappers";
 import type { Category } from "../types/lead";
 
 const DEFAULT_CATEGORY: Category = {
@@ -16,9 +17,6 @@ export async function getCategoryById(
 ): Promise<Category> {
   if (!id) return DEFAULT_CATEGORY;
 
-  const { rows } = await getPool().query<Category>(
-    `SELECT * FROM categories WHERE id = $1`,
-    [id]
-  );
-  return rows[0] ?? DEFAULT_CATEGORY;
+  const category = await prisma.category.findUnique({ where: { id } });
+  return category ? toCategoryDto(category) : DEFAULT_CATEGORY;
 }
