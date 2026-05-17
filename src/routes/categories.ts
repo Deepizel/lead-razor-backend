@@ -1,10 +1,16 @@
 import { Router, Request, Response } from "express";
 import {
   createCategory,
+  findCategoryById,
   listCategories,
 } from "../repositories/categoryRepository";
 
 export const categoriesRouter = Router();
+
+function categoryIdParam(req: Request): string {
+  const id = req.params.id;
+  return Array.isArray(id) ? id[0] : id;
+}
 
 categoriesRouter.get("/", async (_req: Request, res: Response) => {
   try {
@@ -13,6 +19,20 @@ categoriesRouter.get("/", async (_req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to list categories" });
+  }
+});
+
+categoriesRouter.get("/:id", async (req: Request, res: Response) => {
+  try {
+    const category = await findCategoryById(categoryIdParam(req));
+    if (!category) {
+      res.status(404).json({ error: "Category not found" });
+      return;
+    }
+    res.json({ category });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch category" });
   }
 });
 

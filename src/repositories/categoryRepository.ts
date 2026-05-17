@@ -38,11 +38,17 @@ export async function createCategory(
   return toCategoryDto(category);
 }
 
+/** For API — returns null if the category does not exist. */
+export async function findCategoryById(id: string): Promise<Category | null> {
+  const category = await prisma.category.findUnique({ where: { id } });
+  return category ? toCategoryDto(category) : null;
+}
+
+/** For internal use (e.g. LLM profiling) — falls back to a default when missing. */
 export async function getCategoryById(
   id: string | null
 ): Promise<Category> {
   if (!id) return DEFAULT_CATEGORY;
-
-  const category = await prisma.category.findUnique({ where: { id } });
-  return category ? toCategoryDto(category) : DEFAULT_CATEGORY;
+  const category = await findCategoryById(id);
+  return category ?? DEFAULT_CATEGORY;
 }

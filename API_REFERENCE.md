@@ -19,6 +19,7 @@ CORS is enabled on all routes. No authentication in the current build.
 |--------|------|-------------|
 | `GET` | `/` | Health check |
 | `GET` | `/api/categories` | List all categories |
+| `GET` | `/api/categories/:id` | Get one category by ID |
 | `POST` | `/api/categories` | Create a category |
 | `GET` | `/api/leads/:id` | Lead detail + snapshot |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
@@ -85,7 +86,54 @@ GET /api/categories
 
 ---
 
-## 3. Create category
+## 3. Get category by ID
+
+```http
+GET /api/categories/:id
+```
+
+**Path params**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | `string` (UUID) | Category ID |
+
+**Request body:** none
+
+**Success `200`**
+
+```json
+{
+  "category": {
+    "id": "223e4567-e89b-12d3-a456-426614174001",
+    "name": "Enterprise SaaS",
+    "offering": "We provide an AI-powered CRM automation platform...",
+    "statement": "A good fit is a company with an existing CRM...",
+    "created_at": "2025-05-17T10:00:00.000Z",
+    "updated_at": "2025-05-17T10:00:00.000Z"
+  }
+}
+```
+
+**Error `404`**
+
+```json
+{
+  "error": "Category not found"
+}
+```
+
+**Error `500`**
+
+```json
+{
+  "error": "Failed to fetch category"
+}
+```
+
+---
+
+## 4. Create category
 
 ```http
 POST /api/categories
@@ -140,7 +188,7 @@ POST /api/categories
 
 ---
 
-## 4. Get lead by ID
+## 5. Get lead by ID
 
 ```http
 GET /api/leads/:id
@@ -233,7 +281,7 @@ GET /api/leads/:id
 
 ---
 
-## 5. Refresh lead snapshot (LLM profiling)
+## 6. Refresh lead snapshot (LLM profiling)
 
 Runs OpenAI profiling and upserts snapshot including **suggested email** subject/body.
 
@@ -314,7 +362,7 @@ Or message containing `OPENAI` / missing API key if LLM is not configured.
 
 ---
 
-## 6. Send suggested email
+## 7. Send suggested email
 
 Sends `snapshot.suggestedEmail` to the lead via **Resend**. Requires a snapshot with non-empty subject and body (run snapshot refresh first).
 
