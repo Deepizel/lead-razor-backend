@@ -79,13 +79,17 @@ Schema lives in `prisma/schema.prisma`. Models: `Category`, `Lead`, `LeadSnapsho
 | `@prisma/client did not initialize` | Run `npm run db:generate` |
 | Neon project sleeping | Wake project in Neon console, retry |
 
-## Already ran the old SQL migration?
+## P3005: “database schema is not empty” (Render / existing Neon DB)
 
-If tables exist from the previous raw SQL setup, run:
+This means tables already exist (e.g. from an earlier SQL setup or `db push`) but Prisma has no migration history.
+
+**One-time fix (local, using production `DATABASE_URL`):**
 
 ```bash
-npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script > prisma/migrations/0_baseline/migration.sql
-npx prisma migrate resolve --applied 0_baseline
+npx prisma migrate resolve --applied 20250517120000_init --schema=prisma/schema.prisma
+npx prisma migrate deploy --schema=prisma/schema.prisma
 ```
 
-Or use `npm run db:push` if the existing tables match `schema.prisma`.
+**On Render:** the build runs `npm run db:deploy:render`, which detects P3005 and baselines automatically.
+
+If baseline fails, confirm existing tables match `prisma/schema.prisma`, or reset the Neon branch and redeploy fresh.

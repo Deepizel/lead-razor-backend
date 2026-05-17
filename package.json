@@ -18,6 +18,7 @@
     "db:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
     "db:push": "prisma db push --schema=prisma/schema.prisma",
     "db:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "db:deploy:render": "node scripts/deploy-migrations.mjs",
     "postinstall": "prisma generate --schema=prisma/schema.prisma"
   },
   "keywords": [],
