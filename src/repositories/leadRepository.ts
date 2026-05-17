@@ -55,6 +55,7 @@ export interface UpdateLeadInput {
   phone?: string | null;
   source?: string | null;
   initial_message?: string | null;
+  business_detail?: string | null;
 }
 
 export async function updateLead(
@@ -93,6 +94,9 @@ export async function updateLead(
       ...(input.initial_message !== undefined && {
         initialMessage: input.initial_message,
       }),
+      ...(input.business_detail !== undefined && {
+        businessDetail: input.business_detail,
+      }),
     },
   });
 
@@ -127,6 +131,7 @@ export async function upsertLeadFromRow(
     phone: row.phone ?? null,
     source: row.source ?? null,
     initialMessage: row.initial_message ?? null,
+    businessDetail: row.business_detail ?? null,
   };
 
   const lead = existing

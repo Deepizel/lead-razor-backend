@@ -30,6 +30,7 @@ model Lead {
   phone            String?   @db.VarChar(50)
   source           String?   @db.VarChar(100)
   initialMessage   String?   @map("initial_message")
+  businessDetail   String?   @map("business_detail")
   score            Int       @default(0)
   tier             String    @default("cold") @db.VarChar(10)
   emailsSent       Int       @default(0) @map("emails_sent")

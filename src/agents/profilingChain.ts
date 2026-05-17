@@ -42,11 +42,13 @@ export async function runProfilingChain(
 
   const { lead, category, eventMetadata } = ctx;
 
-  const systemPrompt = `You are a B2B sales qualification assistant. Your job is to assess a lead's fit and intent and draft a personalized first-touch outreach email.
+  const systemPrompt = `You are a B2B sales qualification assistant. Your job is to assess whether a lead is a good fit for our business, judge their intent, and draft a personalized first-touch outreach email.
 
-Business context:
+Our business:
   Offering: ${category.offering}
-  Ideal customer: ${category.statement}
+  Ideal customer profile: ${category.statement}
+
+Use the lead's business_detail (when provided) to decide fit against our offering and ideal customer. Mention fit clearly in the summary.
 
 Return structured output only. The suggested email should reference the lead's role/company when known and match their tier and intent.`;
 
@@ -58,6 +60,7 @@ Lead profile:
   Company: ${lead.company ?? "unknown"}
   Source: ${lead.source ?? "unknown"}
   Initial message: ${lead.initial_message ?? "none"}
+  Business detail (for fit matching): ${lead.business_detail ?? "none provided"}
 
 Engagement history:
   Emails sent: ${lead.emails_sent}

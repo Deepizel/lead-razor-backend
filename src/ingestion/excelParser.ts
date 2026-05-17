@@ -10,6 +10,7 @@ export interface ParsedLeadRow {
   phone?: string | null;
   source?: string | null;
   initial_message?: string | null;
+  business_detail?: string | null;
   category_id?: string | null;
 }
 
@@ -46,6 +47,13 @@ const COLUMN_ALIASES: Record<string, string> = {
   message: "initial_message",
   initialmessage: "initial_message",
   notes: "initial_message",
+  businessdetail: "business_detail",
+  business_detail: "business_detail",
+  business_details: "business_detail",
+  companydetails: "business_detail",
+  company_details: "business_detail",
+  about: "business_detail",
+  lead_details: "business_detail",
   categoryid: "category_id",
   category: "category_id",
 };
@@ -137,6 +145,7 @@ export function parseLeadsExcel(buffer: Buffer): ExcelParseResult {
       phone: cellString(normalized.phone),
       source: cellString(normalized.source),
       initial_message: cellString(normalized.initial_message),
+      business_detail: cellString(normalized.business_detail),
       category_id: cellString(normalized.category_id),
     });
   });

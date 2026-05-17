@@ -17,6 +17,7 @@ export function toLeadDto(lead: Lead): LeadDto {
     phone: lead.phone,
     source: lead.source,
     initial_message: lead.initialMessage,
+    business_detail: lead.businessDetail,
     score: lead.score,
     tier: lead.tier as LeadDto["tier"],
     emails_sent: lead.emailsSent,
