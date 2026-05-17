@@ -12,6 +12,32 @@ const DEFAULT_CATEGORY: Category = {
   updated_at: new Date(),
 };
 
+export async function listCategories(): Promise<Category[]> {
+  const categories = await prisma.category.findMany({
+    orderBy: { name: "asc" },
+  });
+  return categories.map(toCategoryDto);
+}
+
+export interface CreateCategoryInput {
+  name: string;
+  offering: string;
+  statement: string;
+}
+
+export async function createCategory(
+  input: CreateCategoryInput
+): Promise<Category> {
+  const category = await prisma.category.create({
+    data: {
+      name: input.name.trim(),
+      offering: input.offering.trim(),
+      statement: input.statement.trim(),
+    },
+  });
+  return toCategoryDto(category);
+}
+
 export async function getCategoryById(
   id: string | null
 ): Promise<Category> {

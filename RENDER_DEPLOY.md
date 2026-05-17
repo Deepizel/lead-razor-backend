@@ -1,5 +1,7 @@
 # Deploy on Render
 
+For a full postmortem of errors we hit and why each fix worked, see **[`docs/DEPLOYMENT_ERRORS.md`](docs/DEPLOYMENT_ERRORS.md)**.
+
 ## Required dashboard settings
 
 If you are **not** using the Blueprint (`render.yaml`), set these in the Render web service **Settings**:
@@ -7,7 +9,7 @@ If you are **not** using the Blueprint (`render.yaml`), set these in the Render 
 | Setting | Value |
 |---------|--------|
 | **Root Directory** | *(leave empty — repo root)* |
-| **Build Command** | `npm install && npm run build && npm run db:deploy:render` |
+| **Build Command** | `NPM_CONFIG_PRODUCTION=false npm install && npm run build && npm run db:deploy:render` |
 | **Start Command** | `npm start` |
 
 ### Do not use
