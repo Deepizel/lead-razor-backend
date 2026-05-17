@@ -117,6 +117,7 @@ leadsRouter.patch("/:id", async (req: Request, res: Response) => {
       phone: body.phone,
       source: body.source,
       initial_message: body.initial_message,
+      business_detail: body.business_detail,
     });
 
     if (!lead) {

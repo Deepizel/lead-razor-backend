@@ -43,7 +43,9 @@ User-defined qualifiers that **ground LLM prompts** (not used in deterministic s
 One row per person; **`email` is unique** (dedup / upsert on upload).
 
 **Required on upload:** `first_name`, `last_name`, `email`  
-**Optional:** `company`, `job_title`, `phone`, `source`, `initial_message`, `category_id`
+**Optional:** `company`, `job_title`, `phone`, `source`, `initial_message`, `business_detail`, `category_id`
+
+`business_detail` — brief description of the lead's business for LLM fit matching against the category offering (not used in deterministic scoring).
 
 **Maintained by backend:**
 

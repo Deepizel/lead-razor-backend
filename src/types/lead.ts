@@ -12,6 +12,7 @@ export interface Lead {
   phone: string | null;
   source: string | null;
   initial_message: string | null;
+  business_detail: string | null;
   score: number;
   tier: LeadTier;
   emails_sent: number;

@@ -260,7 +260,7 @@ Content-Type: multipart/form-data
 | `categoryId` | No | UUID applied to rows without `category_id` column |
 
 **Required Excel columns:** `first_name`, `last_name`, `email`  
-**Optional:** `company`, `job_title`, `phone`, `source`, `initial_message`, `category_id`  
+**Optional:** `company`, `job_title`, `phone`, `source`, `initial_message`, `business_detail`, `category_id`  
 (Column names are case-insensitive; spaces → underscores.)
 
 **Success `202`**
@@ -393,9 +393,12 @@ PATCH /api/leads/:id
   "job_title": "VP Sales",
   "phone": "+1...",
   "source": "webinar",
-  "initial_message": "Interested in demo"
+  "initial_message": "Interested in demo",
+  "business_detail": "200-person logistics firm, evaluating CRM automation for outbound sales team."
 }
 ```
+
+`business_detail` — brief context about the lead's business; used by the LLM to assess fit against your category offering.
 
 Recalculates **score** and **tier** after update.
 
