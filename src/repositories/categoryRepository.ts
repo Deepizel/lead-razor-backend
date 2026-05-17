@@ -38,6 +38,30 @@ export async function createCategory(
   return toCategoryDto(category);
 }
 
+export interface UpdateCategoryInput {
+  name?: string;
+  offering?: string;
+  statement?: string;
+}
+
+export async function updateCategory(
+  id: string,
+  input: UpdateCategoryInput
+): Promise<Category | null> {
+  const existing = await prisma.category.findUnique({ where: { id } });
+  if (!existing) return null;
+
+  const category = await prisma.category.update({
+    where: { id },
+    data: {
+      ...(input.name !== undefined && { name: input.name.trim() }),
+      ...(input.offering !== undefined && { offering: input.offering.trim() }),
+      ...(input.statement !== undefined && { statement: input.statement.trim() }),
+    },
+  });
+  return toCategoryDto(category);
+}
+
 /** For API — returns null if the category does not exist. */
 export async function findCategoryById(id: string): Promise<Category | null> {
   const category = await prisma.category.findUnique({ where: { id } });

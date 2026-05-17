@@ -3,6 +3,7 @@ import {
   createCategory,
   findCategoryById,
   listCategories,
+  updateCategory,
 } from "../repositories/categoryRepository";
 
 export const categoriesRouter = Router();
@@ -59,5 +60,56 @@ categoriesRouter.post("/", async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to create category" });
+  }
+});
+
+categoriesRouter.patch("/:id", async (req: Request, res: Response) => {
+  try {
+    const { name, offering, statement } = req.body ?? {};
+
+    if (
+      name !== undefined &&
+      (typeof name !== "string" || !name.trim())
+    ) {
+      res.status(400).json({ error: "name must be a non-empty string" });
+      return;
+    }
+    if (
+      offering !== undefined &&
+      (typeof offering !== "string" || !offering.trim())
+    ) {
+      res.status(400).json({ error: "offering must be a non-empty string" });
+      return;
+    }
+    if (
+      statement !== undefined &&
+      (typeof statement !== "string" || !statement.trim())
+    ) {
+      res.status(400).json({ error: "statement must be a non-empty string" });
+      return;
+    }
+
+    if (name === undefined && offering === undefined && statement === undefined) {
+      res.status(400).json({
+        error: "Provide at least one of: name, offering, statement",
+      });
+      return;
+    }
+
+    const category = await updateCategory(categoryIdParam(req), {
+      name,
+      offering,
+      statement,
+    });
+
+    if (!category) {
+      res.status(404).json({ error: "Category not found" });
+      return;
+    }
+
+    res.json({ category });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update category" });
   }
 });

@@ -21,7 +21,11 @@ CORS is enabled on all routes. No authentication in the current build.
 | `GET` | `/api/categories` | List all categories |
 | `GET` | `/api/categories/:id` | Get one category by ID |
 | `POST` | `/api/categories` | Create a category |
+| `PATCH` | `/api/categories/:id` | Update a category |
+| `GET` | `/api/leads` | List leads (`?tier=&sort=`) |
+| `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
 | `GET` | `/api/leads/:id` | Lead detail + snapshot |
+| `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
 | `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
 
@@ -133,7 +137,29 @@ GET /api/categories/:id
 
 ---
 
-## 4. Create category
+## 4. Update category
+
+```http
+PATCH /api/categories/:id
+```
+
+**Request body** (at least one field)
+
+```json
+{
+  "name": "Enterprise SaaS",
+  "offering": "Updated offering text...",
+  "statement": "Updated qualifying statement..."
+}
+```
+
+**Success `200`** — `{ "category": { ... } }`  
+**Error `404`** — category not found  
+**Error `400`** — empty body or invalid fields
+
+---
+
+## 5. Create category
 
 ```http
 POST /api/categories
@@ -188,7 +214,75 @@ POST /api/categories
 
 ---
 
-## 5. Get lead by ID
+## 6. List leads
+
+```http
+GET /api/leads?tier=hot&sort=score
+```
+
+| Query | Values | Default |
+|-------|--------|---------|
+| `tier` | `hot`, `warm`, `cold` | all |
+| `sort` | `score`, `created_at` | `score` |
+
+**Success `200`**
+
+```json
+{
+  "leads": [
+    {
+      "id": "...",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane@acme.com",
+      "score": 72,
+      "tier": "hot",
+      "snapshot_summary": "VP at logistics co...",
+      "snapshot_intent": "high",
+      "...": "other lead fields"
+    }
+  ]
+}
+```
+
+---
+
+## 7. Upload leads (Excel)
+
+```http
+POST /api/leads/upload
+Content-Type: multipart/form-data
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `file` | Yes | `.xlsx` spreadsheet |
+| `categoryId` | No | UUID applied to rows without `category_id` column |
+
+**Required Excel columns:** `first_name`, `last_name`, `email`  
+**Optional:** `company`, `job_title`, `phone`, `source`, `initial_message`, `category_id`  
+(Column names are case-insensitive; spaces → underscores.)
+
+**Success `202`**
+
+```json
+{
+  "uploadId": "uuid",
+  "rowCount": 50,
+  "status": "processing",
+  "processed": 48,
+  "created": 40,
+  "updated": 8,
+  "errors": [{ "rowNumber": 12, "email": "bad@", "error": "Invalid email format" }],
+  "profilingQueued": 48
+}
+```
+
+Upserts by **email**. Scores each lead immediately. LLM profiling runs **async** when `OPENAI_API_KEY` is set.
+
+---
+
+## 8. Get lead by ID
 
 ```http
 GET /api/leads/:id
@@ -281,7 +375,37 @@ GET /api/leads/:id
 
 ---
 
-## 6. Refresh lead snapshot (LLM profiling)
+## 9. Update lead
+
+```http
+PATCH /api/leads/:id
+```
+
+**Request body** (any subset)
+
+```json
+{
+  "category_id": "uuid-or-null",
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane@acme.com",
+  "company": "Acme",
+  "job_title": "VP Sales",
+  "phone": "+1...",
+  "source": "webinar",
+  "initial_message": "Interested in demo"
+}
+```
+
+Recalculates **score** and **tier** after update.
+
+**Success `200`** — same shape as get lead (`lead` + `snapshot`)  
+**Error `404`** — lead not found  
+**Error `409`** — email already used by another lead
+
+---
+
+## 10. Refresh lead snapshot (LLM profiling)
 
 Runs OpenAI profiling and upserts snapshot including **suggested email** subject/body.
 
@@ -362,7 +486,7 @@ Or message containing `OPENAI` / missing API key if LLM is not configured.
 
 ---
 
-## 7. Send suggested email
+## 11. Send suggested email
 
 Sends `snapshot.suggestedEmail` to the lead via **Resend**. Requires a snapshot with non-empty subject and body (run snapshot refresh first).
 
@@ -464,16 +588,13 @@ Recommended order for a new lead: **PATCH snapshot** → review `suggestedEmail`
 
 ---
 
-## Not implemented yet (from product spec)
-
-These paths are **not** available on the server today. Plan frontend against them only after backend adds them:
+## Not implemented yet
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `POST` | `/api/leads/upload` | Excel upload (`multipart/form-data`) |
 | `GET` | `/api/uploads/:id/progress` | SSE upload/profiling progress |
-| `GET` | `/api/leads` | List leads (`?tier=hot&sort=score`) |
 | `POST` | `/api/events` | Engagement webhooks |
+
 See `BACKEND_FLOW_UNDERSTANDING.md` for full product behavior.
 
 ---
