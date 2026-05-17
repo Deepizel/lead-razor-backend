@@ -2,13 +2,24 @@
   "name": "razor-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-"scripts": {
-  "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-  "build": "tsc",
-  "start": "node dist/index.js",
-  "migrate": "ts-node src/db/migrate.ts"
-},
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
+  },
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "prisma generate --schema=prisma/schema.prisma && tsc",
+    "start": "node dist/index.js",
+    "db:check": "ts-node src/db/checkConnection.ts",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema=prisma/schema.prisma",
+    "db:push": "prisma db push --schema=prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "postinstall": "prisma generate --schema=prisma/schema.prisma"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -18,8 +29,8 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "@prisma/client": "^6.9.0",
     "langchain": "^0.3.30",
-    "pg": "^8.16.0",
     "resend": "^4.5.1",
     "uuid": "^11.1.0",
     "zod": "^3.25.67"
@@ -28,8 +39,8 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^25.8.0",
-    "@types/pg": "^8.15.4",
     "@types/uuid": "^10.0.0",
+    "prisma": "^6.9.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.3"

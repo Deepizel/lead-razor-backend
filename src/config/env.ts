@@ -16,6 +16,7 @@ function optionalEnv(name: string, fallback = ""): string {
 
 export const env = {
   port: Number(process.env.PORT ?? 5000),
+  /** Postgres URL (Neon pooled). Prisma reads this via schema.prisma */
   databaseUrl: optionalEnv("DATABASE_URL"),
   openaiApiKey: optionalEnv("OPENAI_API_KEY"),
   openaiModel: optionalEnv("OPENAI_MODEL", "gpt-4o-mini"),

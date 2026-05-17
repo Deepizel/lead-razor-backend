@@ -15,7 +15,7 @@ The Lead Qualifier ingests sales leads (primarily via Excel upload), maintains a
 | Scoring | Pure application logic — rules + weights, no LLM |
 | Profiling / synthesis | LangChain.js → OpenAI (or Claude), structured JSON |
 | When LLM runs | ~1× at upload (initial snapshot) + ~0–2× over lifecycle on meaningful change |
-| Persistence | PostgreSQL: `categories`, `leads`, `lead_snapshots` (+ implied upload/job tracking for SSE) |
+| Persistence | PostgreSQL via **Prisma** — `categories`, `leads`, `lead_snapshots` (+ implied upload/job tracking for SSE) |
 | Ingestion | SheetJS on server for `.xlsx` parse + column mapping |
 
 **Your edits / clarifications:**
@@ -342,7 +342,7 @@ Current stack: Express 5, CORS, dotenv, TypeScript only.
 
 | Package / service | Purpose |
 |-------------------|---------|
-| `pg` or ORM | PostgreSQL |
+| `prisma` + `@prisma/client` | PostgreSQL ORM |
 | `multer` | Multipart upload |
 | `xlsx` (SheetJS) | Excel parse |
 | `langchain` + provider SDK | Profiling chain |

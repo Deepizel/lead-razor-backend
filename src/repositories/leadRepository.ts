@@ -1,27 +1,24 @@
-import { getPool } from "../db/pool";
+import { prisma } from "../db/prisma";
+import { toLeadDto } from "../lib/prismaMappers";
 import type { Lead } from "../types/lead";
 
 export async function getLeadById(id: string): Promise<Lead | null> {
-  const { rows } = await getPool().query<Lead>(
-    `SELECT * FROM leads WHERE id = $1`,
-    [id]
-  );
-  return rows[0] ?? null;
+  const lead = await prisma.lead.findUnique({ where: { id } });
+  return lead ? toLeadDto(lead) : null;
 }
 
 export async function incrementEmailsSent(leadId: string): Promise<Lead> {
-  const { rows } = await getPool().query<Lead>(
-    `UPDATE leads
-     SET emails_sent = emails_sent + 1,
-         last_event_type = 'email_sent',
-         last_event_at = NOW(),
-         updated_at = NOW()
-     WHERE id = $1
-     RETURNING *`,
-    [leadId]
-  );
-  if (!rows[0]) {
+  try {
+    const lead = await prisma.lead.update({
+      where: { id: leadId },
+      data: {
+        emailsSent: { increment: 1 },
+        lastEventType: "email_sent",
+        lastEventAt: new Date(),
+      },
+    });
+    return toLeadDto(lead);
+  } catch {
     throw new Error(`Lead not found: ${leadId}`);
   }
-  return rows[0];
 }
