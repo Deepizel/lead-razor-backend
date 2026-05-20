@@ -9,11 +9,36 @@
 Content-Type: application/json
 ```
 
-CORS is enabled on all routes. No authentication in the current build.
+CORS is enabled on all routes.
+
+**Protected routes** require:
+
+```http
+Authorization: Bearer <accessToken>
+```
+
+Access tokens expire in **5 minutes**. Use `POST /api/auth/refresh` with the refresh token to stay logged in.
+
+See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 
 ---
 
 ## Implemented endpoints
+
+### Auth (public)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/auth/signup` | Register; sends email verification link |
+| `GET` | `/api/auth/verify-email?token=` | Confirm email (link from inbox) |
+| `POST` | `/api/auth/login` | Login → access + refresh tokens |
+| `POST` | `/api/auth/refresh` | New access token (5m) + rotated refresh |
+| `POST` | `/api/auth/logout` | Revoke refresh token |
+| `POST` | `/api/auth/forgot-password` | Send password reset link |
+| `POST` | `/api/auth/reset-password` | Set new password with token |
+| `GET` | `/api/auth/me` | Current user (requires Bearer) |
+
+### App (requires auth + verified email)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -28,6 +53,46 @@ CORS is enabled on all routes. No authentication in the current build.
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
 | `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
+
+---
+
+## Auth endpoints (summary)
+
+### Signup
+
+```http
+POST /api/auth/signup
+{ "email": "you@company.com", "password": "minimum8chars" }
+```
+
+→ `201` — check email for verification link.
+
+### Login
+
+```http
+POST /api/auth/login
+{ "email": "you@company.com", "password": "..." }
+```
+
+→ `200`
+
+```json
+{
+  "accessToken": "eyJ...",
+  "refreshToken": "hex...",
+  "expiresIn": "5m",
+  "user": { "id": "uuid", "email": "...", "emailVerified": true }
+}
+```
+
+### Refresh (call ~every 4 minutes while app is open)
+
+```http
+POST /api/auth/refresh
+{ "refreshToken": "..." }
+```
+
+→ New `accessToken` + new `refreshToken`.
 
 ---
 
@@ -612,4 +677,4 @@ VITE_API_BASE_URL=https://lead-razor-backend.onrender.com
 # or NEXT_PUBLIC_API_BASE_URL=...
 ```
 
-Backend must have `DATABASE_URL` (Neon + Prisma — see `NEON_SETUP.md`), `OPENAI_API_KEY` (snapshot), and `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (send email) configured.
+Backend must have `DATABASE_URL`, `JWT_SECRET`, `APP_URL`, `OPENAI_API_KEY` (snapshot), and `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (auth + lead emails) configured.

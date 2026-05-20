@@ -3,15 +3,17 @@ import { toLeadSnapshotDto } from "../lib/prismaMappers";
 import type { LeadSnapshot, ProfilingResult } from "../types/lead";
 
 export async function getSnapshotByLeadId(
+  userId: string,
   leadId: string
 ): Promise<LeadSnapshot | null> {
-  const snapshot = await prisma.leadSnapshot.findUnique({
-    where: { leadId },
+  const snapshot = await prisma.leadSnapshot.findFirst({
+    where: { leadId, userId },
   });
   return snapshot ? toLeadSnapshotDto(snapshot) : null;
 }
 
 export interface UpsertSnapshotInput {
+  userId: string;
   leadId: string;
   currentScore: number;
   result: ProfilingResult;
@@ -22,11 +24,12 @@ export interface UpsertSnapshotInput {
 export async function upsertSnapshot(
   input: UpsertSnapshotInput
 ): Promise<LeadSnapshot> {
-  const { leadId, currentScore, result, llmModel, tokenCost } = input;
+  const { userId, leadId, currentScore, result, llmModel, tokenCost } = input;
 
   const snapshot = await prisma.leadSnapshot.upsert({
     where: { leadId },
     create: {
+      userId,
       leadId,
       currentScore,
       summary: result.summary,
@@ -38,6 +41,7 @@ export async function upsertSnapshot(
       tokenCost: tokenCost ?? null,
     },
     update: {
+      userId,
       currentScore,
       summary: result.summary,
       currentIntent: result.currentIntent,
@@ -53,17 +57,21 @@ export async function upsertSnapshot(
 }
 
 export async function markSuggestedEmailSent(
+  userId: string,
   leadId: string
 ): Promise<LeadSnapshot> {
-  try {
-    const snapshot = await prisma.leadSnapshot.update({
-      where: { leadId },
-      data: { suggestedEmailSentAt: new Date() },
-    });
-    return toLeadSnapshotDto(snapshot);
-  } catch {
+  const existing = await prisma.leadSnapshot.findFirst({
+    where: { leadId, userId },
+  });
+  if (!existing) {
     throw new Error(`Snapshot not found for lead: ${leadId}`);
   }
+
+  const snapshot = await prisma.leadSnapshot.update({
+    where: { leadId },
+    data: { suggestedEmailSentAt: new Date() },
+  });
+  return toLeadSnapshotDto(snapshot);
 }
 
 export function snapshotHasSuggestedEmail(

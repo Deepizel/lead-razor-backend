@@ -1,7 +1,17 @@
 node_modules
+
 dist
+
 .env
+
+.md
+
 .env.*
+
 !.env.example
+
 coverage
+
 .DS_Store
+
+node_modules

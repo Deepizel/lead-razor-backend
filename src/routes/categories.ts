@@ -13,9 +13,9 @@ function categoryIdParam(req: Request): string {
   return Array.isArray(id) ? id[0] : id;
 }
 
-categoriesRouter.get("/", async (_req: Request, res: Response) => {
+categoriesRouter.get("/", async (req: Request, res: Response) => {
   try {
-    const categories = await listCategories();
+    const categories = await listCategories(req.user!.id);
     res.json({ categories });
   } catch (err) {
     console.error(err);
@@ -25,7 +25,7 @@ categoriesRouter.get("/", async (_req: Request, res: Response) => {
 
 categoriesRouter.get("/:id", async (req: Request, res: Response) => {
   try {
-    const category = await findCategoryById(categoryIdParam(req));
+    const category = await findCategoryById(req.user!.id, categoryIdParam(req));
     if (!category) {
       res.status(404).json({ error: "Category not found" });
       return;
@@ -55,7 +55,11 @@ categoriesRouter.post("/", async (req: Request, res: Response) => {
       return;
     }
 
-    const category = await createCategory({ name, offering, statement });
+    const category = await createCategory(req.user!.id, {
+      name,
+      offering,
+      statement,
+    });
     res.status(201).json({ category });
   } catch (err) {
     console.error(err);
@@ -96,7 +100,7 @@ categoriesRouter.patch("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const category = await updateCategory(categoryIdParam(req), {
+    const category = await updateCategory(req.user!.id, categoryIdParam(req), {
       name,
       offering,
       statement,

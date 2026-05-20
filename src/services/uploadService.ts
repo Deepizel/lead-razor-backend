@@ -15,6 +15,7 @@ export interface UploadResult {
 }
 
 export async function processLeadsUpload(
+  userId: string,
   fileBuffer: Buffer,
   defaultCategoryId?: string | null
 ): Promise<UploadResult> {
@@ -35,7 +36,7 @@ export async function processLeadsUpload(
   for (const row of parsed.rows) {
     try {
       const categoryId = row.category_id ?? defaultCategoryId ?? null;
-      const { lead, isNew } = await upsertLeadFromRow(row, categoryId);
+      const { lead, isNew } = await upsertLeadFromRow(userId, row, categoryId);
       if (isNew) created += 1;
       else updated += 1;
       leadIdsForProfiling.push(lead.id);
@@ -48,7 +49,7 @@ export async function processLeadsUpload(
     }
   }
 
-  const profilingQueued = queueProfiling(leadIdsForProfiling);
+  const profilingQueued = queueProfiling(userId, leadIdsForProfiling);
 
   return {
     uploadId,
@@ -61,12 +62,12 @@ export async function processLeadsUpload(
   };
 }
 
-function queueProfiling(leadIds: string[]): number {
+function queueProfiling(userId: string, leadIds: string[]): number {
   if (!env.openaiApiKey || leadIds.length === 0) return 0;
 
   for (const leadId of leadIds) {
     setImmediate(() => {
-      refreshLeadSnapshot(leadId).catch((err) => {
+      refreshLeadSnapshot(leadId, { userId }).catch((err) => {
         console.error(`Profiling failed for lead ${leadId}:`, err);
       });
     });
