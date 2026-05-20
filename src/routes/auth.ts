@@ -1,16 +1,31 @@
 import { Router, Request, Response } from "express";
 import * as authService from "../services/auth/authService";
 import { authenticate } from "../middleware/authenticate";
+import { isMissingEnvError } from "../config/env";
 
 export const authRouter = Router();
 
 function authError(res: Response, err: unknown, fallback: string): void {
   const message = err instanceof Error ? err.message : fallback;
+
+  if (isMissingEnvError(err)) {
+    res.status(503).json({
+      error: message,
+      hint:
+        "Set this variable on the server that handles the request. Local .env only applies when you run the API locally. On Render: Dashboard → your service → Environment → add RESEND_API_KEY and RESEND_FROM_EMAIL, then redeploy.",
+    });
+    return;
+  }
+
   const status =
     err instanceof Error && "statusCode" in err
       ? (err as Error & { statusCode: number }).statusCode
-      : message.includes("already exists") ||
-          message.includes("required") ||
+      : message.includes("Failed to send verification email") ||
+          message.includes("Failed to send reset email")
+        ? 502
+        : message.includes("already exists") ||
+          (message.includes("required") &&
+            !message.includes("environment variable")) ||
           message.includes("at least") ||
           message.includes("Invalid or expired")
         ? 400

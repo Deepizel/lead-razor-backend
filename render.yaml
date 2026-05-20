@@ -10,3 +10,18 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
+      # Set values in Render Dashboard → Environment (sync: false = not in git)
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
