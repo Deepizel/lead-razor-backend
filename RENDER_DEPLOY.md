@@ -21,13 +21,44 @@ If you are **not** using the Blueprint (`render.yaml`), set these in the Render 
 
 ## Environment variables
 
-Set in Render → **Environment**:
+Set in Render → **Environment** (then **Save** and wait for redeploy).  
+**Local `.env` is not used on Render** — if the frontend calls `https://lead-razor-backend.onrender.com`, you must set every variable below on Render.
 
-- `DATABASE_URL` — Neon connection string (`?sslmode=require`)
-- `OPENAI_API_KEY`
-- `RESEND_API_KEY`
-- `RESEND_FROM_EMAIL`
-- `PORT` — set automatically by Render (do not override unless needed)
+| Variable | Required for | Notes |
+|----------|----------------|-------|
+| `DATABASE_URL` | All API | Neon connection string (`?sslmode=require`) |
+| `JWT_SECRET` | Login, refresh, protected routes | Long random string |
+| `JWT_ACCESS_EXPIRES` | Auth | e.g. `5m` |
+| `JWT_REFRESH_EXPIRES_DAYS` | Auth | e.g. `7` |
+| `APP_URL` | Email links | e.g. `https://lead-razor-backend.onrender.com` |
+| `FRONTEND_URL` | Optional | Your SPA URL for verify/reset links |
+| `RESEND_API_KEY` | Signup, forgot password, lead emails | From [resend.com/api-keys](https://resend.com/api-keys) |
+| `RESEND_FROM_EMAIL` | Same | **Verified sender** in Resend — not your personal inbox. Dev: `onboarding@resend.dev` (only sends to the email on your Resend account). Production: `noreply@yourdomain.com` after domain verification. |
+| `OPENAI_API_KEY` | Lead profiling | |
+| `PORT` | — | Set automatically by Render |
+
+### Check what the live server sees
+
+After deploy:
+
+```http
+GET https://lead-razor-backend.onrender.com/api/health/config
+```
+
+Example when Resend is missing on Render:
+
+```json
+{ "database": true, "auth": true, "resend": false }
+```
+
+If `resend` is `false`, add `RESEND_API_KEY` and `RESEND_FROM_EMAIL` in Render Environment and redeploy.
+
+### Common mistake
+
+| Symptom | Cause |
+|---------|--------|
+| `Missing required environment variable: RESEND_FROM_EMAIL` on signup | Variable missing **on Render**, while only present in local `.env` |
+| Works in Postman against `localhost:5000` but fails from the app | App points at Render; set env on Render |
 
 ## Git
 

@@ -49,6 +49,29 @@ async function issueTokens(user: AuthUser): Promise<AuthTokensResponse> {
   };
 }
 
+const SIGNUP_SUCCESS_MESSAGE =
+  "Account created. Check your email for a verification link before logging in.";
+
+const RESEND_VERIFICATION_MESSAGE =
+  "A verification link has been sent to your email. Check your inbox before logging in.";
+
+async function issueVerificationAndSend(
+  userId: string,
+  email: string,
+  passwordHash: string
+): Promise<void> {
+  const verificationToken = generateSecureToken();
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash,
+      emailVerificationToken: verificationToken,
+      emailVerificationExpires: verificationExpiresAt(),
+    },
+  });
+  await sendVerificationEmail(email, verificationToken);
+}
+
 export async function signup(
   email: string,
   password: string
@@ -57,31 +80,49 @@ export async function signup(
   const passwordError = validatePasswordStrength(password);
   if (passwordError) throw new Error(passwordError);
 
+  const passwordHash = await hashPassword(password);
+
   const existing = await prisma.user.findUnique({
     where: { email: normalizedEmail },
   });
+
   if (existing) {
-    throw new Error("An account with this email already exists");
+    if (existing.emailVerifiedAt) {
+      throw new Error("An account with this email already exists");
+    }
+    try {
+      await issueVerificationAndSend(existing.id, normalizedEmail, passwordHash);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to send verification email";
+      const emailErr = new Error(message);
+      (emailErr as Error & { statusCode?: number }).statusCode =
+        message.includes("Missing required environment variable") ? 503 : 502;
+      throw emailErr;
+    }
+    return { message: RESEND_VERIFICATION_MESSAGE };
   }
 
-  const verificationToken = generateSecureToken();
-  const passwordHash = await hashPassword(password);
-
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
       passwordHash,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpiresAt(),
     },
   });
 
-  await sendVerificationEmail(normalizedEmail, verificationToken);
+  try {
+    await issueVerificationAndSend(user.id, normalizedEmail, passwordHash);
+  } catch (err) {
+    await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+    const message =
+      err instanceof Error ? err.message : "Failed to send verification email";
+    const emailErr = new Error(message);
+    (emailErr as Error & { statusCode?: number }).statusCode =
+      message.includes("Missing required environment variable") ? 503 : 502;
+    throw emailErr;
+  }
 
-  return {
-    message:
-      "Account created. Check your email for a verification link before logging in.",
-  };
+  return { message: SIGNUP_SUCCESS_MESSAGE };
 }
 
 export async function verifyEmail(token: string): Promise<{ message: string }> {

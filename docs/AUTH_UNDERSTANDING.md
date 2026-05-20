@@ -24,11 +24,13 @@ Lead **email** is unique **per user** (same lead email can exist for two differe
 You described an **OTP link** in email. We implement this as a **one-click verification link** (secure random token), not a 6-digit code typed in the app:
 
 1. `POST /api/auth/signup` with email + password  
-2. Account is created but **not verified**  
+2. Account is created but **not verified** (only after the verification email sends successfully)  
 3. Email is sent with a link, e.g.  
    `{APP_URL}/api/auth/verify-email?token=...`  
 4. User clicks the link → email is marked verified  
 5. **Login is blocked** until verified (`403` with a clear message)
+
+**Signup retry:** If the first attempt failed to send email (e.g. missing `RESEND_*` on the server), the user row may not exist (rolled back). If email failed after an older bug left an **unverified** row in the DB, signing up again with the same email **resends** the verification link instead of returning “already exists”. Verified accounts still get “already exists”.
 
 This matches “click link to automatically confirm email.”
 
