@@ -7,6 +7,7 @@ import { env } from "../config/env";
 import type { Lead, ProfilingResult } from "../types/lead";
 
 export interface RefreshSnapshotOptions {
+  userId: string;
   eventMetadata?: {
     emailSubject?: string;
     replySnippet?: string;
@@ -14,19 +15,17 @@ export interface RefreshSnapshotOptions {
   };
 }
 
-/**
- * Runs the LLM profiling chain and persists summary, intent, and suggested email on the snapshot.
- */
 export async function refreshLeadSnapshot(
   leadId: string,
-  options: RefreshSnapshotOptions = {}
+  options: RefreshSnapshotOptions
 ) {
-  const lead = await getLeadById(leadId);
+  const { userId } = options;
+  const lead = await getLeadById(userId, leadId);
   if (!lead) {
     throw new Error(`Lead not found: ${leadId}`);
   }
 
-  const category = await getCategoryById(lead.category_id);
+  const category = await getCategoryById(userId, lead.category_id);
   const { score } = calculateScore(lead);
 
   const { result } = await runProfilingChain({
@@ -36,6 +35,7 @@ export async function refreshLeadSnapshot(
   });
 
   const snapshot = await upsertSnapshot({
+    userId,
     leadId,
     currentScore: score,
     result,

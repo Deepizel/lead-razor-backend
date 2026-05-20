@@ -1,5 +1,8 @@
 import { sendLeadEmail } from "./email/resendEmailService";
-import { incrementEmailsSent, getLeadById } from "../repositories/leadRepository";
+import {
+  getLeadById,
+  incrementEmailsSent,
+} from "../repositories/leadRepository";
 import {
   getSnapshotByLeadId,
   markSuggestedEmailSent,
@@ -13,18 +16,16 @@ export interface SendSuggestedEmailResult {
   subject: string;
 }
 
-/**
- * Sends the LLM-suggested email from the lead snapshot via Resend.
- */
 export async function sendSuggestedEmailFromSnapshot(
+  userId: string,
   leadId: string
 ): Promise<SendSuggestedEmailResult> {
-  const lead = await getLeadById(leadId);
+  const lead = await getLeadById(userId, leadId);
   if (!lead) {
     throw new Error(`Lead not found: ${leadId}`);
   }
 
-  const snapshot = await getSnapshotByLeadId(leadId);
+  const snapshot = await getSnapshotByLeadId(userId, leadId);
   if (!snapshot || !snapshotHasSuggestedEmail(snapshot)) {
     throw new Error(
       "No suggested email on snapshot. Refresh the snapshot via PATCH /api/leads/:id/snapshot first."
@@ -37,8 +38,8 @@ export async function sendSuggestedEmailFromSnapshot(
     body: snapshot.suggested_email_body,
   });
 
-  await incrementEmailsSent(leadId);
-  await markSuggestedEmailSent(leadId);
+  await incrementEmailsSent(userId, leadId);
+  await markSuggestedEmailSent(userId, leadId);
 
   return {
     leadId,

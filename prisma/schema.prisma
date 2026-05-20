@@ -7,24 +7,62 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                    String    @unique @db.VarChar(255)
+  passwordHash             String    @map("password_hash")
+  emailVerifiedAt          DateTime? @map("email_verified_at") @db.Timestamptz(6)
+  emailVerificationToken   String?   @unique @map("email_verification_token")
+  emailVerificationExpires DateTime? @map("email_verification_expires") @db.Timestamptz(6)
+  passwordResetToken       String?   @unique @map("password_reset_token")
+  passwordResetExpires     DateTime? @map("password_reset_expires") @db.Timestamptz(6)
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  refreshTokens RefreshToken[]
+  categories    Category[]
+  leads         Lead[]
+  snapshots     LeadSnapshot[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
 model Category {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
   name      String   @db.VarChar(100)
   offering  String
   statement String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  leads     Lead[]
 
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads Lead[]
+
+  @@index([userId])
   @@map("categories")
 }
 
 model Lead {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
   categoryId       String?   @map("category_id") @db.Uuid
   firstName        String    @map("first_name") @db.VarChar(100)
   lastName         String    @map("last_name") @db.VarChar(100)
-  email            String    @unique @db.VarChar(255)
+  email            String    @db.VarChar(255)
   company          String?   @db.VarChar(255)
   jobTitle         String?   @map("job_title") @db.VarChar(255)
   phone            String?   @db.VarChar(50)
@@ -43,14 +81,18 @@ model Lead {
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category?     @relation(fields: [categoryId], references: [id])
   snapshot LeadSnapshot?
 
+  @@unique([userId, email])
+  @@index([userId])
   @@map("leads")
 }
 
 model LeadSnapshot {
   id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId                String    @map("user_id") @db.Uuid
   leadId                String    @unique @map("lead_id") @db.Uuid
   currentScore          Int       @map("current_score")
   summary               String
@@ -64,7 +106,9 @@ model LeadSnapshot {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("lead_snapshots")
 }

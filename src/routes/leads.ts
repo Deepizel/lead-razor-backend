@@ -21,7 +21,6 @@ function leadIdParam(req: Request): string {
   return Array.isArray(id) ? id[0] : id;
 }
 
-/** Upload .xlsx file — upsert leads, score, queue LLM profiling. */
 leadsRouter.post(
   "/upload",
   excelUpload.single("file"),
@@ -39,7 +38,11 @@ leadsRouter.post(
           ? req.body.categoryId.trim()
           : undefined;
 
-      const result = await processLeadsUpload(req.file.buffer, categoryId);
+      const result = await processLeadsUpload(
+        req.user!.id,
+        req.file.buffer,
+        categoryId
+      );
 
       res.status(202).json({
         uploadId: result.uploadId,
@@ -60,7 +63,6 @@ leadsRouter.post(
   }
 );
 
-/** List leads — ?tier=hot|warm|cold&sort=score|created_at */
 leadsRouter.get("/", async (req: Request, res: Response) => {
   try {
     const tier = req.query.tier as string | undefined;
@@ -75,7 +77,7 @@ leadsRouter.get("/", async (req: Request, res: Response) => {
       return;
     }
 
-    const leads = await listLeads({
+    const leads = await listLeads(req.user!.id, {
       tier: tier as LeadTier | undefined,
       sort: (sort as "score" | "created_at") ?? "score",
     });
@@ -89,12 +91,13 @@ leadsRouter.get("/", async (req: Request, res: Response) => {
 
 leadsRouter.get("/:id", async (req: Request, res: Response) => {
   try {
-    const lead = await getLeadById(leadIdParam(req));
+    const userId = req.user!.id;
+    const lead = await getLeadById(userId, leadIdParam(req));
     if (!lead) {
       res.status(404).json({ error: "Lead not found" });
       return;
     }
-    const snapshot = await getSnapshotByLeadId(lead.id);
+    const snapshot = await getSnapshotByLeadId(userId, lead.id);
     res.json(
       snapshot ? formatSnapshotResponse(lead, snapshot) : { lead, snapshot: null }
     );
@@ -106,8 +109,9 @@ leadsRouter.get("/:id", async (req: Request, res: Response) => {
 
 leadsRouter.patch("/:id", async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const body = req.body ?? {};
-    const lead = await updateLead(leadIdParam(req), {
+    const lead = await updateLead(userId, leadIdParam(req), {
       category_id: body.category_id,
       first_name: body.first_name,
       last_name: body.last_name,
@@ -125,7 +129,7 @@ leadsRouter.patch("/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    const snapshot = await getSnapshotByLeadId(lead.id);
+    const snapshot = await getSnapshotByLeadId(userId, lead.id);
     res.json(
       snapshot ? formatSnapshotResponse(lead, snapshot) : { lead, snapshot: null }
     );
@@ -137,10 +141,10 @@ leadsRouter.patch("/:id", async (req: Request, res: Response) => {
   }
 });
 
-/** Force LLM profiling; saves summary + suggested email on snapshot. */
 leadsRouter.patch("/:id/snapshot", async (req: Request, res: Response) => {
   try {
     const { lead, snapshot } = await refreshLeadSnapshot(leadIdParam(req), {
+      userId: req.user!.id,
       eventMetadata: req.body?.metadata,
     });
     res.json(formatSnapshotResponse(lead, snapshot));
@@ -152,10 +156,12 @@ leadsRouter.patch("/:id/snapshot", async (req: Request, res: Response) => {
   }
 });
 
-/** Send the snapshot's suggested email to the lead via Resend. */
 leadsRouter.post("/:id/email/send", async (req: Request, res: Response) => {
   try {
-    const result = await sendSuggestedEmailFromSnapshot(leadIdParam(req));
+    const result = await sendSuggestedEmailFromSnapshot(
+      req.user!.id,
+      leadIdParam(req)
+    );
     res.status(200).json({
       status: "sent",
       ...result,
