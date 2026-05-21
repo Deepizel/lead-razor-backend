@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import type { LeadTier } from "../types/lead";
 
@@ -16,7 +17,7 @@ export async function recordLeadEvent(input: {
   eventType: LeadEventType;
   fromTier?: LeadTier | null;
   toTier?: LeadTier | null;
-  metadata?: Record<string, unknown>;
+  metadata?: Prisma.InputJsonValue;
 }): Promise<void> {
   await prisma.leadEvent.create({
     data: {
@@ -25,7 +26,7 @@ export async function recordLeadEvent(input: {
       eventType: input.eventType,
       fromTier: input.fromTier ?? null,
       toTier: input.toTier ?? null,
-      metadata: input.metadata ?? undefined,
+      metadata: input.metadata,
     },
   });
 }
