@@ -25,6 +25,7 @@ model User {
   snapshots     LeadSnapshot[]
   leadUploads   LeadUpload[]
   leadEvents    LeadEvent[]
+  sentEmails    SentEmail[]
 
   @@map("users")
 }
@@ -126,8 +127,9 @@ model Lead {
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   upload   LeadUpload?   @relation(fields: [uploadId], references: [id], onDelete: SetNull)
   category Category?     @relation(fields: [categoryId], references: [id])
-  snapshot LeadSnapshot?
-  events   LeadEvent[]
+  snapshot   LeadSnapshot?
+  events     LeadEvent[]
+  sentEmails SentEmail[]
 
   @@unique([userId, email])
   @@index([userId])
@@ -156,4 +158,32 @@ model LeadSnapshot {
 
   @@index([userId])
   @@map("lead_snapshots")
+}
+
+model SentEmail {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String    @map("user_id") @db.Uuid
+  leadId            String    @map("lead_id") @db.Uuid
+  provider          String    @db.VarChar(20)
+  providerMessageId String?   @map("provider_message_id") @db.VarChar(255)
+  subject           String    @db.VarChar(500)
+  bodyHtml          String    @map("body_html")
+  bodyText          String    @map("body_text")
+  linksJson         Json?     @map("links_json") @db.JsonB
+  status            String    @default("pending") @db.VarChar(20)
+  sentAt            DateTime? @map("sent_at") @db.Timestamptz(6)
+  firstOpenedAt     DateTime? @map("first_opened_at") @db.Timestamptz(6)
+  openCount         Int       @default(0) @map("open_count")
+  firstClickedAt    DateTime? @map("first_clicked_at") @db.Timestamptz(6)
+  clickCount        Int       @default(0) @map("click_count")
+  repliedAt         DateTime? @map("replied_at") @db.Timestamptz(6)
+  replySnippet      String?   @map("reply_snippet")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt(sort: Desc)])
+  @@index([leadId, sentAt(sort: Desc)])
+  @@map("sent_emails")
 }

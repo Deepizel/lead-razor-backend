@@ -12,6 +12,7 @@ import {
   formatSnapshotResponse,
 } from "../services/snapshotService";
 import { sendSuggestedEmailFromSnapshot } from "../services/leadEmailService";
+import { listLeadEmailHistory } from "../services/email/outreachEmailService";
 import type { LeadTier } from "../types/lead";
 
 export const leadsRouter = Router();
@@ -97,6 +98,21 @@ leadsRouter.get("/", async (req: Request, res: Response) => {
   }
 });
 
+leadsRouter.get("/:id/emails", async (req: Request, res: Response) => {
+  try {
+    const emails = await listLeadEmailHistory(
+      req.user!.id,
+      leadIdParam(req)
+    );
+    res.json({ leadId: leadIdParam(req), emails });
+  } catch (err) {
+    console.error(err);
+    const message = err instanceof Error ? err.message : "Failed to load email history";
+    const status = message.includes("not found") ? 404 : 500;
+    res.status(status).json({ error: message });
+  }
+});
+
 leadsRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -179,8 +195,9 @@ leadsRouter.post("/:id/email/send", async (req: Request, res: Response) => {
     const message = err instanceof Error ? err.message : "Email send failed";
     let status = 500;
     if (message.includes("not found")) status = 404;
-    if (message.includes("No suggested email")) status = 400;
-    if (message.includes("RESEND") || message.includes("Resend")) status = 502;
+    if (message.includes("No suggested") || message.includes("required")) status = 400;
+    if (message.includes("Missing required environment")) status = 503;
+    if (message.includes("RESEND") || message.includes("Resend") || message.includes("SMTP")) status = 502;
     res.status(status).json({ error: message });
   }
 });
