@@ -2,7 +2,29 @@ import { prisma } from "../db/prisma";
 import { toLeadDto } from "../lib/prismaMappers";
 import type { ParsedLeadRow } from "../ingestion/excelParser";
 import { calculateScore } from "../services/scoringService";
+import {
+  recordEmailSent,
+  recordLeadCreated,
+  recordTierChange,
+} from "../services/leadEventService";
 import type { Lead, LeadTier } from "../types/lead";
+
+async function applyScoreWithEvents(
+  userId: string,
+  leadId: string,
+  dto: Lead,
+  previousTier?: LeadTier
+): Promise<Lead> {
+  const { score, tier } = calculateScore(dto);
+  const scored = await prisma.lead.update({
+    where: { id: leadId },
+    data: { score, tier },
+  });
+  const result = toLeadDto(scored);
+  const fromTier = previousTier ?? (dto.tier as LeadTier);
+  await recordTierChange(userId, leadId, fromTier, tier);
+  return result;
+}
 
 export interface ListLeadsOptions {
   tier?: LeadTier;
@@ -121,20 +143,14 @@ export async function updateLead(
   });
 
   const dto = toLeadDto(lead);
-  const { score, tier } = calculateScore(dto);
-
-  const scored = await prisma.lead.update({
-    where: { id },
-    data: { score, tier },
-  });
-
-  return toLeadDto(scored);
+  return applyScoreWithEvents(userId, id, dto, existing.tier as LeadTier);
 }
 
 export async function upsertLeadFromRow(
   userId: string,
   row: ParsedLeadRow,
-  defaultCategoryId: string | null
+  defaultCategoryId: string | null,
+  uploadId?: string | null
 ): Promise<{ lead: Lead; isNew: boolean }> {
   const categoryId = row.category_id ?? defaultCategoryId ?? null;
 
@@ -163,22 +179,36 @@ export async function upsertLeadFromRow(
     businessDetail: row.business_detail ?? null,
   };
 
+  const previousTier = existing?.tier as LeadTier | undefined;
+
   const lead = existing
     ? await prisma.lead.update({
         where: { userId_email: { userId, email: row.email } },
-        data,
+        data: {
+          ...data,
+          ...(uploadId ? { uploadId } : {}),
+        },
       })
-    : await prisma.lead.create({ data });
+    : await prisma.lead.create({
+        data: {
+          ...data,
+          uploadId: uploadId ?? null,
+        },
+      });
 
   const dto = toLeadDto(lead);
-  const { score, tier } = calculateScore(dto);
+  const scored = await applyScoreWithEvents(
+    userId,
+    lead.id,
+    dto,
+    previousTier
+  );
 
-  const scored = await prisma.lead.update({
-    where: { id: lead.id },
-    data: { score, tier },
-  });
+  if (!existing) {
+    await recordLeadCreated(userId, lead.id, scored.tier, uploadId ?? undefined);
+  }
 
-  return { lead: toLeadDto(scored), isNew: !existing };
+  return { lead: scored, isNew: !existing };
 }
 
 export async function incrementEmailsSent(
@@ -198,5 +228,6 @@ export async function incrementEmailsSent(
       lastEventAt: new Date(),
     },
   });
+  await recordEmailSent(userId, leadId);
   return toLeadDto(lead);
 }

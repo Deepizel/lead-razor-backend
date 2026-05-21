@@ -1,6 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
 import { parseLeadsExcel } from "../ingestion/excelParser";
 import { upsertLeadFromRow } from "../repositories/leadRepository";
+import {
+  createLeadUpload,
+  finalizeLeadUpload,
+} from "../repositories/uploadRepository";
 import { refreshLeadSnapshot } from "./snapshotService";
 import { env } from "../config/env";
 
@@ -17,7 +21,8 @@ export interface UploadResult {
 export async function processLeadsUpload(
   userId: string,
   fileBuffer: Buffer,
-  defaultCategoryId?: string | null
+  defaultCategoryId?: string | null,
+  sourceLabel?: string | null
 ): Promise<UploadResult> {
   const uploadId = uuidv4();
   const parsed = parseLeadsExcel(fileBuffer);
@@ -33,10 +38,26 @@ export async function processLeadsUpload(
   const rowErrors = [...parsed.errors];
   const leadIdsForProfiling: string[] = [];
 
+  const uploadRecord = await createLeadUpload({
+    userId,
+    externalUploadId: uploadId,
+    defaultCategoryId,
+    rowCount: parsed.rows.length + parsed.errors.length,
+    createdCount: 0,
+    updatedCount: 0,
+    errorCount: parsed.errors.length,
+    sourceLabel,
+  });
+
   for (const row of parsed.rows) {
     try {
       const categoryId = row.category_id ?? defaultCategoryId ?? null;
-      const { lead, isNew } = await upsertLeadFromRow(userId, row, categoryId);
+      const { lead, isNew } = await upsertLeadFromRow(
+        userId,
+        row,
+        categoryId,
+        uploadRecord.id
+      );
       if (isNew) created += 1;
       else updated += 1;
       leadIdsForProfiling.push(lead.id);
@@ -48,6 +69,12 @@ export async function processLeadsUpload(
       });
     }
   }
+
+  await finalizeLeadUpload(uploadRecord.id, {
+    createdCount: created,
+    updatedCount: updated,
+    errorCount: rowErrors.length,
+  });
 
   const profilingQueued = queueProfiling(userId, leadIdsForProfiling);
 

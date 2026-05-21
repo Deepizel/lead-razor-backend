@@ -11,9 +11,11 @@ import {
   passwordResetExpiresAt,
   refreshTokenExpiresAt,
   signAccessToken,
-  verificationExpiresAt,
 } from "./tokenService";
-import { sendPasswordResetEmail, sendVerificationEmail } from "./authEmailService";
+import { sendPasswordResetEmail } from "./authEmailService";
+
+/** Set emailVerifiedAt on signup/login. Re-enable sendVerificationEmail when Resend is configured. */
+const AUTO_VERIFY_EMAIL = true;
 
 function toAuthUser(user: {
   id: string;
@@ -49,33 +51,21 @@ async function issueTokens(user: AuthUser): Promise<AuthTokensResponse> {
   };
 }
 
-const SIGNUP_SUCCESS_MESSAGE =
-  "Account created. Check your email for a verification link before logging in.";
-
-const RESEND_VERIFICATION_MESSAGE =
-  "A verification link has been sent to your email. Check your inbox before logging in.";
-
-async function issueVerificationAndSend(
-  userId: string,
-  email: string,
-  passwordHash: string
-): Promise<void> {
-  const verificationToken = generateSecureToken();
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash,
-      emailVerificationToken: verificationToken,
-      emailVerificationExpires: verificationExpiresAt(),
-    },
-  });
-  await sendVerificationEmail(email, verificationToken);
+function verifiedUserData(passwordHash: string) {
+  return AUTO_VERIFY_EMAIL
+    ? {
+        passwordHash,
+        emailVerifiedAt: new Date(),
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      }
+    : { passwordHash };
 }
 
 export async function signup(
   email: string,
   password: string
-): Promise<{ message: string }> {
+): Promise<AuthTokensResponse> {
   const normalizedEmail = email.toLowerCase().trim();
   const passwordError = validatePasswordStrength(password);
   if (passwordError) throw new Error(passwordError);
@@ -90,39 +80,21 @@ export async function signup(
     if (existing.emailVerifiedAt) {
       throw new Error("An account with this email already exists");
     }
-    try {
-      await issueVerificationAndSend(existing.id, normalizedEmail, passwordHash);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Failed to send verification email";
-      const emailErr = new Error(message);
-      (emailErr as Error & { statusCode?: number }).statusCode =
-        message.includes("Missing required environment variable") ? 503 : 502;
-      throw emailErr;
-    }
-    return { message: RESEND_VERIFICATION_MESSAGE };
+    const user = await prisma.user.update({
+      where: { id: existing.id },
+      data: verifiedUserData(passwordHash),
+    });
+    return issueTokens(toAuthUser(user));
   }
 
   const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
-      passwordHash,
+      ...verifiedUserData(passwordHash),
     },
   });
 
-  try {
-    await issueVerificationAndSend(user.id, normalizedEmail, passwordHash);
-  } catch (err) {
-    await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
-    const message =
-      err instanceof Error ? err.message : "Failed to send verification email";
-    const emailErr = new Error(message);
-    (emailErr as Error & { statusCode?: number }).statusCode =
-      message.includes("Missing required environment variable") ? 503 : 502;
-    throw emailErr;
-  }
-
-  return { message: SIGNUP_SUCCESS_MESSAGE };
+  return issueTokens(toAuthUser(user));
 }
 
 export async function verifyEmail(token: string): Promise<{ message: string }> {
@@ -162,6 +134,18 @@ export async function login(
     throw new Error("Invalid email or password");
   }
 
+  if (!user.emailVerifiedAt && AUTO_VERIFY_EMAIL) {
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        emailVerifiedAt: new Date(),
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
+    return issueTokens(toAuthUser(updated));
+  }
+
   const authUser = toAuthUser(user);
   if (!authUser.emailVerified) {
     const err = new Error(
@@ -191,8 +175,18 @@ export async function refresh(
 
   await prisma.refreshToken.delete({ where: { id: record.id } });
 
-  const authUser = toAuthUser(record.user);
-  if (!authUser.emailVerified) {
+  let authUser = toAuthUser(record.user);
+  if (!authUser.emailVerified && AUTO_VERIFY_EMAIL) {
+    const updated = await prisma.user.update({
+      where: { id: record.user.id },
+      data: {
+        emailVerifiedAt: new Date(),
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
+    authUser = toAuthUser(updated);
+  } else if (!authUser.emailVerified) {
     throw new Error("Email not verified");
   }
 
