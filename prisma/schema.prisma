@@ -23,6 +23,8 @@ model User {
   categories    Category[]
   leads         Lead[]
   snapshots     LeadSnapshot[]
+  leadUploads   LeadUpload[]
+  leadEvents    LeadEvent[]
 
   @@map("users")
 }
@@ -56,9 +58,49 @@ model Category {
   @@map("categories")
 }
 
+model LeadUpload {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  externalUploadId  String   @map("external_upload_id") @db.VarChar(36)
+  defaultCategoryId String?  @map("default_category_id") @db.Uuid
+  rowCount          Int      @default(0) @map("row_count")
+  createdCount      Int      @default(0) @map("created_count")
+  updatedCount      Int      @default(0) @map("updated_count")
+  errorCount        Int      @default(0) @map("error_count")
+  sourceLabel       String?  @map("source_label") @db.VarChar(100)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads Lead[]
+
+  @@unique([userId, externalUploadId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("lead_uploads")
+}
+
+model LeadEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  leadId    String   @map("lead_id") @db.Uuid
+  eventType String   @map("event_type") @db.VarChar(50)
+  fromTier  String?  @map("from_tier") @db.VarChar(10)
+  toTier    String?  @map("to_tier") @db.VarChar(10)
+  metadata  Json?    @db.JsonB
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, eventType, createdAt(sort: Desc)])
+  @@index([leadId, createdAt(sort: Desc)])
+  @@map("lead_events")
+}
+
 model Lead {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId           String    @map("user_id") @db.Uuid
+  uploadId         String?   @map("upload_id") @db.Uuid
   categoryId       String?   @map("category_id") @db.Uuid
   firstName        String    @map("first_name") @db.VarChar(100)
   lastName         String    @map("last_name") @db.VarChar(100)
@@ -82,11 +124,14 @@ model Lead {
   updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload   LeadUpload?   @relation(fields: [uploadId], references: [id], onDelete: SetNull)
   category Category?     @relation(fields: [categoryId], references: [id])
   snapshot LeadSnapshot?
+  events   LeadEvent[]
 
   @@unique([userId, email])
   @@index([userId])
+  @@index([uploadId])
   @@map("leads")
 }
 

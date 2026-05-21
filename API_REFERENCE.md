@@ -53,6 +53,80 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
 | `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
+| `GET` | `/api/analytics/pipeline` | Pipeline dashboard aggregations (`?days=30`) |
+
+---
+
+## Pipeline analytics
+
+Read-only dashboard data for the Pipeline Analytics panel. No LLM — aggregations on `leads`, `lead_uploads`, and `lead_events`.
+
+```http
+GET /api/analytics/pipeline?days=30
+Authorization: Bearer <accessToken>
+```
+
+**Query**
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `days` | `30` | Lookback window (clamped 7–365) for tier movement series |
+
+**Success `200`**
+
+```json
+{
+  "period": { "days": 30, "from": "...", "to": "..." },
+  "tierDistribution": { "hot": 12, "warm": 40, "cold": 88 },
+  "tierMovement": [
+    {
+      "periodStart": "2025-05-12",
+      "transitions": { "cold_to_warm": 3, "warm_to_hot": 2 },
+      "netHotDelta": 2
+    }
+  ],
+  "engagement": {
+    "totalLeads": 140,
+    "leadsEmailed": 50,
+    "openRate": 0.42,
+    "replyRate": 0.08,
+    "clickRate": 0.2,
+    "bookingRate": 0.04
+  },
+  "byCategory": [
+    {
+      "categoryId": "uuid",
+      "categoryName": "Enterprise SaaS",
+      "hot": 5,
+      "warm": 10,
+      "cold": 20,
+      "total": 35
+    }
+  ],
+  "uploads": [
+    {
+      "id": "uuid",
+      "externalUploadId": "client-upload-uuid",
+      "createdAt": "...",
+      "rowCount": 100,
+      "createdCount": 80,
+      "updatedCount": 20,
+      "errorCount": 0,
+      "sourceLabel": "Q1 trade show",
+      "leadSources": ["referral", "linkedin"],
+      "tierCounts": { "hot": 2, "warm": 15, "cold": 63 }
+    }
+  ],
+  "hotLeadsWeekOverWeek": { "currentWeek": 12, "previousWeek": 4 }
+}
+```
+
+**Notes**
+
+- `tierMovement` is built from `tier_change` events recorded when scores are recalculated (upload, PATCH lead, etc.).
+- Engagement rates use **leads with at least one email sent** as the denominator.
+- Upload `sourceLabel` is optional on `POST /api/leads/upload` (`sourceLabel` or `source` form field).
+- Run migration `20250520120000_add_pipeline_analytics` before using this endpoint.
 
 ---
 

@@ -38,10 +38,18 @@ leadsRouter.post(
           ? req.body.categoryId.trim()
           : undefined;
 
+      const sourceLabel =
+        typeof req.body?.sourceLabel === "string" && req.body.sourceLabel.trim()
+          ? req.body.sourceLabel.trim()
+          : typeof req.body?.source === "string" && req.body.source.trim()
+            ? req.body.source.trim()
+            : undefined;
+
       const result = await processLeadsUpload(
         req.user!.id,
         req.file.buffer,
-        categoryId
+        categoryId,
+        sourceLabel
       );
 
       res.status(202).json({

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authRouter } from "./auth";
 import { categoriesRouter } from "./categories";
 import { leadsRouter } from "./leads";
+import { analyticsRouter } from "./analytics";
 import { authenticate } from "../middleware/authenticate";
 import { getConfigStatus } from "../config/env";
 
@@ -18,5 +19,6 @@ const protectedRouter = Router();
 protectedRouter.use(authenticate);
 protectedRouter.use("/categories", categoriesRouter);
 protectedRouter.use("/leads", leadsRouter);
+protectedRouter.use("/analytics", analyticsRouter);
 
 apiRouter.use(protectedRouter);
