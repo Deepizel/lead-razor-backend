@@ -81,10 +81,11 @@ Most recent event context:
   Reply snippet: ${eventMetadata.replySnippet ?? "n/a"}`;
   }
 
-  const result = await model.invoke([
+  const raw = await model.invoke([
     { role: "system", content: systemPrompt },
     { role: "user", content: userPrompt },
   ]);
 
+  const result: ProfilingResult = ProfilingOutputSchema.parse(raw);
   return { result };
 }

@@ -54,6 +54,13 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
 | `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
 | `GET` | `/api/analytics/pipeline` | Pipeline dashboard aggregations (`?days=30`) |
+| `POST` | `/api/emails/draft` | Draft subject/body from lead snapshot |
+| `POST` | `/api/emails/send` | Send outreach (one lead or bulk) |
+| `GET` | `/api/emails` | Outbox — all sent emails |
+| `GET` | `/api/emails/:id` | Sent email detail + tracking |
+| `GET` | `/api/leads/:id/emails` | Lead email timeline |
+
+See **`docs/EMAIL_OUTREACH.md`** for env vars, tracking URLs, and webhooks.
 
 ---
 
