@@ -65,7 +65,7 @@ POST /api/auth/signup
 { "email": "you@company.com", "password": "minimum8chars" }
 ```
 
-→ `201` — check email for verification link.
+→ `201` — same shape as login (`accessToken`, `refreshToken`, `user`). Email verification is off until Resend is configured.
 
 ### Login
 

@@ -44,8 +44,8 @@ authRouter.post("/signup", async (req: Request, res: Response) => {
       res.status(400).json({ error: "email and password are required" });
       return;
     }
-    const result = await authService.signup(email, password);
-    res.status(201).json(result);
+    const tokens = await authService.signup(email, password);
+    res.status(201).json(tokens);
   } catch (err) {
     authError(res, err, "Signup failed");
   }
