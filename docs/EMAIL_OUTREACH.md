@@ -49,3 +49,5 @@ npx prisma migrate deploy
 
 - **Resend + custom domain:** configure inbound webhook → `POST /api/webhooks/resend/inbound`
 - **Gmail SMTP:** open/click only in Phase 1; replies need manual events or future Gmail API poll
+
+**Backlog:** see [NOT_IMPLEMENTED.md](./NOT_IMPLEMENTED.md) for deferred items (Gmail reply polling, generic `/api/events`, frontend UI, etc.).

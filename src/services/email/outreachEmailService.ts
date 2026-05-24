@@ -8,6 +8,7 @@ import {
   markSentEmailDelivered,
   markSentEmailFailed,
   parseLinksJson,
+  toLinksJson,
 } from "../../repositories/sentEmailRepository";
 import {
   getSnapshotByLeadId,
@@ -95,7 +96,7 @@ export async function sendOutreachToLead(
 
   await prisma.sentEmail.update({
     where: { id: pending.id },
-    data: { bodyHtml: html, bodyText: text, linksJson: links },
+    data: { bodyHtml: html, bodyText: text, linksJson: toLinksJson(links) },
   });
 
   try {

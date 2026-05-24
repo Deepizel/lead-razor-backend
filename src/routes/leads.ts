@@ -9,7 +9,8 @@ import { getSnapshotByLeadId } from "../repositories/snapshotRepository";
 import { processLeadsUpload } from "../services/uploadService";
 import {
   refreshLeadSnapshot,
-  formatSnapshotResponse,
+  formatLeadDetailResponse,
+  buildScoreBreakdownForLead,
 } from "../services/snapshotService";
 import { sendSuggestedEmailFromSnapshot } from "../services/leadEmailService";
 import { listLeadEmailHistory } from "../services/email/outreachEmailService";
@@ -113,6 +114,21 @@ leadsRouter.get("/:id/emails", async (req: Request, res: Response) => {
   }
 });
 
+leadsRouter.get("/:id/score", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const lead = await getLeadById(userId, leadIdParam(req));
+    if (!lead) {
+      res.status(404).json({ error: "Lead not found" });
+      return;
+    }
+    res.json({ leadId: lead.id, scoreBreakdown: buildScoreBreakdownForLead(lead) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch score breakdown" });
+  }
+});
+
 leadsRouter.get("/:id", async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -122,9 +138,7 @@ leadsRouter.get("/:id", async (req: Request, res: Response) => {
       return;
     }
     const snapshot = await getSnapshotByLeadId(userId, lead.id);
-    res.json(
-      snapshot ? formatSnapshotResponse(lead, snapshot) : { lead, snapshot: null }
-    );
+    res.json(formatLeadDetailResponse(lead, snapshot));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch lead" });
@@ -154,9 +168,7 @@ leadsRouter.patch("/:id", async (req: Request, res: Response) => {
     }
 
     const snapshot = await getSnapshotByLeadId(userId, lead.id);
-    res.json(
-      snapshot ? formatSnapshotResponse(lead, snapshot) : { lead, snapshot: null }
-    );
+    res.json(formatLeadDetailResponse(lead, snapshot));
   } catch (err) {
     console.error(err);
     const message = err instanceof Error ? err.message : "Failed to update lead";
@@ -171,7 +183,7 @@ leadsRouter.patch("/:id/snapshot", async (req: Request, res: Response) => {
       userId: req.user!.id,
       eventMetadata: req.body?.metadata,
     });
-    res.json(formatSnapshotResponse(lead, snapshot));
+    res.json(formatLeadDetailResponse(lead, snapshot));
   } catch (err) {
     console.error(err);
     const message = err instanceof Error ? err.message : "Snapshot refresh failed";

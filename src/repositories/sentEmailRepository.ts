@@ -19,7 +19,7 @@ export async function createSentEmail(input: {
       subject: input.subject,
       bodyHtml: input.bodyHtml,
       bodyText: input.bodyText,
-      linksJson: (input.linksJson ?? []) as unknown as Prisma.InputJsonValue,
+      linksJson: toLinksJson(input.linksJson ?? []),
       status: "pending",
     },
     include: {
@@ -175,7 +175,7 @@ export async function recordSentEmailClick(id: string, linkIndex: number) {
     data: {
       clickCount: { increment: 1 },
       firstClickedAt: existing.firstClickedAt ?? now,
-      linksJson: links as unknown as Prisma.InputJsonValue,
+      linksJson: toLinksJson(links),
     },
   });
 }
@@ -195,5 +195,9 @@ export async function recordSentEmailReply(
 
 export function parseLinksJson(value: Prisma.JsonValue | null): TrackedLink[] {
   if (!value || !Array.isArray(value)) return [];
-  return value as TrackedLink[];
+  return value as unknown as TrackedLink[];
+}
+
+export function toLinksJson(links: TrackedLink[]): Prisma.InputJsonValue {
+  return links as unknown as Prisma.InputJsonValue;
 }
