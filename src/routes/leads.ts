@@ -5,6 +5,7 @@ import {
   listLeads,
   updateLead,
 } from "../repositories/leadRepository";
+import { createLeadFromForm } from "../services/leadCreateService";
 import { getSnapshotByLeadId } from "../repositories/snapshotRepository";
 import { processLeadsUpload } from "../services/uploadService";
 import {
@@ -14,6 +15,10 @@ import {
 } from "../services/snapshotService";
 import { sendSuggestedEmailFromSnapshot } from "../services/leadEmailService";
 import { listLeadEmailHistory } from "../services/email/outreachEmailService";
+import {
+  exportUserLeadsXlsx,
+  getUploadTemplateXlsx,
+} from "../services/leadExportService";
 import type { LeadTier } from "../types/lead";
 
 export const leadsRouter = Router();
@@ -22,6 +27,43 @@ function leadIdParam(req: Request): string {
   const id = req.params.id;
   return Array.isArray(id) ? id[0] : id;
 }
+
+function sendXlsxDownload(
+  res: Response,
+  buffer: Buffer,
+  filename: string
+): void {
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(buffer);
+}
+
+/** Blank/sample upload template — same columns as POST /api/leads/upload expects */
+leadsRouter.get("/upload/template", async (req: Request, res: Response) => {
+  try {
+    const includeSamples = req.query.samples !== "false";
+    const buffer = getUploadTemplateXlsx(includeSamples);
+    sendXlsxDownload(res, buffer, "leads_upload_template.xlsx");
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate upload template" });
+  }
+});
+
+/** Export this user's leads as .xlsx (re-uploadable shape) */
+leadsRouter.get("/export", async (req: Request, res: Response) => {
+  try {
+    const buffer = await exportUserLeadsXlsx(req.user!.id);
+    const date = new Date().toISOString().slice(0, 10);
+    sendXlsxDownload(res, buffer, `leads_export_${date}.xlsx`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to export leads" });
+  }
+});
 
 leadsRouter.post(
   "/upload",
@@ -72,6 +114,26 @@ leadsRouter.post(
     }
   }
 );
+
+/** Create a single lead from a form (JSON body) */
+leadsRouter.post("/", async (req: Request, res: Response) => {
+  try {
+    const result = await createLeadFromForm(req.user!.id, req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    console.error(err);
+    const message = err instanceof Error ? err.message : "Failed to create lead";
+    const status =
+      message.includes("required") || message.includes("Invalid email")
+        ? 400
+        : message.includes("already exists")
+          ? 409
+          : message.includes("Category not found")
+            ? 400
+            : 500;
+    res.status(status).json({ error: message });
+  }
+});
 
 leadsRouter.get("/", async (req: Request, res: Response) => {
   try {

@@ -208,7 +208,73 @@ export async function upsertLeadFromRow(
     await recordLeadCreated(userId, lead.id, scored.tier, uploadId ?? undefined);
   }
 
-  return { lead: scored, isNew: !existing };
+  };
+}
+
+export interface CreateLeadInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  category_id?: string | null;
+  company?: string | null;
+  job_title?: string | null;
+  phone?: string | null;
+  source?: string | null;
+  initial_message?: string | null;
+  business_detail?: string | null;
+}
+
+export async function createLead(
+  userId: string,
+  input: CreateLeadInput
+): Promise<Lead> {
+  const email = input.email.toLowerCase().trim();
+  const first_name = input.first_name.trim();
+  const last_name = input.last_name.trim();
+
+  if (!first_name || !last_name || !email) {
+    throw new Error("first_name, last_name, and email are required");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Invalid email format");
+  }
+
+  const existing = await prisma.lead.findUnique({
+    where: { userId_email: { userId, email } },
+  });
+  if (existing) {
+    throw new Error("A lead with this email already exists");
+  }
+
+  const categoryId = input.category_id?.trim() || null;
+  if (categoryId) {
+    const cat = await prisma.category.findFirst({
+      where: { id: categoryId, userId },
+    });
+    if (!cat) throw new Error("Category not found or does not belong to you");
+  }
+
+  const lead = await prisma.lead.create({
+    data: {
+      userId,
+      categoryId,
+      firstName: first_name,
+      lastName: last_name,
+      email,
+      company: input.company?.trim() || null,
+      jobTitle: input.job_title?.trim() || null,
+      phone: input.phone?.trim() || null,
+      source: input.source?.trim() || null,
+      initialMessage: input.initial_message?.trim() || null,
+      businessDetail: input.business_detail?.trim() || null,
+    },
+  });
+
+  const dto = toLeadDto(lead);
+  const scored = await applyScoreWithEvents(userId, lead.id, dto, "cold");
+  await recordLeadCreated(userId, lead.id, scored.tier);
+  return scored;
 }
 
 export async function incrementEmailsSent(

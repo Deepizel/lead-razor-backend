@@ -5,8 +5,7 @@ import {
   createLeadUpload,
   finalizeLeadUpload,
 } from "../repositories/uploadRepository";
-import { refreshLeadSnapshot } from "./snapshotService";
-import { env } from "../config/env";
+import { queueLeadProfiling } from "./profilingQueueService";
 
 export interface UploadResult {
   uploadId: string;
@@ -76,7 +75,7 @@ export async function processLeadsUpload(
     errorCount: rowErrors.length,
   });
 
-  const profilingQueued = queueProfiling(userId, leadIdsForProfiling);
+  const profilingQueued = queueLeadProfiling(userId, leadIdsForProfiling);
 
   return {
     uploadId,
@@ -87,18 +86,4 @@ export async function processLeadsUpload(
     errors: rowErrors,
     profilingQueued,
   };
-}
-
-function queueProfiling(userId: string, leadIds: string[]): number {
-  if (!env.openaiApiKey || leadIds.length === 0) return 0;
-
-  for (const leadId of leadIds) {
-    setImmediate(() => {
-      refreshLeadSnapshot(leadId, { userId }).catch((err) => {
-        console.error(`Profiling failed for lead ${leadId}:`, err);
-      });
-    });
-  }
-
-  return leadIds.length;
 }
