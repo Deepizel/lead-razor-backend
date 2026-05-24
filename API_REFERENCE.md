@@ -52,6 +52,8 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
 | `GET` | `/api/leads/upload/template` | Download upload template (`.xlsx`) |
 | `GET` | `/api/leads/export` | Download all leads as `.xlsx` |
+| `GET` | `/api/reports/tiers` | Tier definitions + score thresholds (for filters) |
+| `GET` | `/api/reports/export` | Filtered leads report `.xlsx` (modal export) |
 | `GET` | `/api/leads/:id` | Lead detail + snapshot |
 | `GET` | `/api/leads/:id/score` | Score breakdown checklist only |
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
@@ -523,6 +525,62 @@ Authorization: Bearer <accessToken>
 **Success `200`** — `.xlsx` download of **all leads for the signed-in user**, same columns as the upload template (re-uploadable).
 
 Filename: `leads_export_YYYY-MM-DD.xlsx`
+
+---
+
+## 7d. Report tier definitions
+
+Use this to populate the Report modal **tier** dropdown (same benchmark as scoring).
+
+```http
+GET /api/reports/tiers
+Authorization: Bearer <accessToken>
+```
+
+**Success `200`**
+
+```json
+{
+  "tiers": [
+    { "id": "hot", "label": "Hot", "minScore": 70, "maxScore": 100 },
+    { "id": "warm", "label": "Warm", "minScore": 40, "maxScore": 69 },
+    { "id": "cold", "label": "Cold", "minScore": 0, "maxScore": 39 }
+  ],
+  "allOption": { "id": null, "label": "All tiers" },
+  "reportLimits": [10, 20, 50, 100, "all"]
+}
+```
+
+Source of truth: `src/constants/leadTiers.ts` (used by `scoringService` when assigning tier).
+
+---
+
+## 7e. Leads report export (filtered)
+
+For the **Report** modal — category, **tier**, date range, and row limit.
+
+```http
+GET /api/reports/export?categoryId=&tier=hot&dateFrom=2026-04-22&dateTo=2026-05-22&limit=50
+Authorization: Bearer <accessToken>
+```
+
+**Query params**
+
+| Param | Required | Description |
+|-------|----------|-------------|
+| `categoryId` | No | Category UUID, or omit / `null` for all categories |
+| `tier` | No | `hot`, `warm`, `cold`, or omit / `all` / `null` for all tiers |
+| `dateFrom` | No | `YYYY-MM-DD` — filter `leads.created_at` (inclusive, UTC start of day) |
+| `dateTo` | No | `YYYY-MM-DD` — inclusive end of day (UTC) |
+| `limit` | No | `10`, `20`, `50`, `100`, or `all` (default `all`) |
+
+Results are scoped to the **authenticated user**, ordered by **score descending**.
+
+**Success `200`** — `.xlsx` download (`leads_report_YYYY-MM-DD.xlsx`)
+
+**Sheet columns (in order):** Name, Email, Company, Job Title, LinkedIn URL, Category, Score, Tier, Intent, AI Summary, Emails Sent, Opened, Replies, Booking Clicks, Last Event, Last Event Date
+
+**Error `400`** — invalid dates, limit, or unknown category
 
 ---
 

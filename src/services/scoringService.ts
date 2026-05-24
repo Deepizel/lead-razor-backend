@@ -1,4 +1,5 @@
 import type { Lead, LeadTier, ScoreBreakdown, ScoreBreakdownItem } from "../types/lead";
+import { tierFromScore } from "../constants/leadTiers";
 
 const EXEC_TITLES = ["ceo", "cto", "coo", "vp", "vice president", "director"];
 const MANAGER_TITLES = ["manager", "lead", "head of"];
@@ -16,10 +17,6 @@ export type ScoreInput = Pick<
   | "replies_received"
   | "booking_clicks"
 >;
-
-function tierFromScore(score: number): LeadTier {
-  return score >= 70 ? "hot" : score >= 40 ? "warm" : "cold";
-}
 
 /** Deterministic score + human-readable checklist (no LLM). */
 export function calculateScoreWithBreakdown(lead: ScoreInput): ScoreBreakdown {
