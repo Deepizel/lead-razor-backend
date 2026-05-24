@@ -5,6 +5,7 @@ import {
   listLeads,
   updateLead,
 } from "../repositories/leadRepository";
+import { createLeadFromForm } from "../services/leadCreateService";
 import { getSnapshotByLeadId } from "../repositories/snapshotRepository";
 import { processLeadsUpload } from "../services/uploadService";
 import {
@@ -113,6 +114,26 @@ leadsRouter.post(
     }
   }
 );
+
+/** Create a single lead from a form (JSON body) */
+leadsRouter.post("/", async (req: Request, res: Response) => {
+  try {
+    const result = await createLeadFromForm(req.user!.id, req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    console.error(err);
+    const message = err instanceof Error ? err.message : "Failed to create lead";
+    const status =
+      message.includes("required") || message.includes("Invalid email")
+        ? 400
+        : message.includes("already exists")
+          ? 409
+          : message.includes("Category not found")
+            ? 400
+            : 500;
+    res.status(status).json({ error: message });
+  }
+});
 
 leadsRouter.get("/", async (req: Request, res: Response) => {
   try {

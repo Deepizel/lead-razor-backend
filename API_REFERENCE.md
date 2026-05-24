@@ -48,6 +48,7 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `POST` | `/api/categories` | Create a category |
 | `PATCH` | `/api/categories/:id` | Update a category |
 | `GET` | `/api/leads` | List leads (`?tier=&sort=`) |
+| `POST` | `/api/leads` | Create one lead (form JSON) |
 | `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
 | `GET` | `/api/leads/upload/template` | Download upload template (`.xlsx`) |
 | `GET` | `/api/leads/export` | Download all leads as `.xlsx` |
@@ -392,6 +393,54 @@ GET /api/leads?tier=hot&sort=score
     }
   ]
 }
+```
+
+---
+
+## 6b. Create lead (form)
+
+```http
+POST /api/leads
+Content-Type: application/json
+Authorization: Bearer <accessToken>
+```
+
+**Required body fields:** `first_name`, `last_name`, `email`
+
+**Optional:** `category_id`, `company`, `job_title`, `phone`, `source`, `initial_message`, `business_detail`
+
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "email": "jane@acme.com",
+  "company": "Acme Logistics",
+  "job_title": "VP Sales",
+  "phone": "+1-555-0100",
+  "source": "referral",
+  "initial_message": "Interested in a demo",
+  "business_detail": "Mid-market freight broker",
+  "category_id": "223e4567-e89b-12d3-a456-426614174001"
+}
+```
+
+**Success `201`**
+
+```json
+{
+  "lead": { "id": "...", "score": 45, "tier": "warm", "...": "..." },
+  "scoreBreakdown": { "total": 45, "tier": "warm", "breakdown": [ "..."] },
+  "snapshot": null,
+  "profilingQueued": 1
+}
+```
+
+Scores immediately; LLM profiling runs async when `OPENAI_API_KEY` is set (same as upload).
+
+**Error `409`** — email already exists for this account
+
+```json
+{ "error": "A lead with this email already exists" }
 ```
 
 ---
