@@ -28,9 +28,7 @@ export function plainTextToHtml(text: string): string {
 
 function extractLinksFromHtml(html: string): string[] {
   const urls: string[] = [];
-  let match: RegExpExecArray | null;
-  const re = new HREF_REGEX;
-  while ((match = re.exec(html)) !== null) {
+  for (const match of html.matchAll(HREF_REGEX)) {
     const url = match[1];
     if (
       url.startsWith("http://") ||

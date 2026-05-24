@@ -50,6 +50,7 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `GET` | `/api/leads` | List leads (`?tier=&sort=`) |
 | `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
 | `GET` | `/api/leads/:id` | Lead detail + snapshot |
+| `GET` | `/api/leads/:id/score` | Score breakdown checklist only |
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
 | `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
@@ -469,6 +470,15 @@ GET /api/leads/:id
     "created_at": "2025-05-17T10:00:00.000Z",
     "updated_at": "2025-05-17T10:00:00.000Z"
   },
+  "scoreBreakdown": {
+    "total": 45,
+    "tier": "warm",
+    "breakdown": [
+      { "signal": "Job title — executive level (VP, director, C-suite)", "points": 20, "met": true },
+      { "signal": "Has company name", "points": 5, "met": true },
+      { "signal": "Replied to email", "points": 20, "met": false }
+    ]
+  },
   "snapshot": {
     "leadId": "123e4567-e89b-12d3-a456-426614174000",
     "currentScore": 45,
@@ -491,9 +501,26 @@ GET /api/leads/:id
 ```json
 {
   "lead": { "...": "same shape as above" },
+  "scoreBreakdown": { "total": 45, "tier": "warm", "breakdown": [ "..."] },
   "snapshot": null
 }
 ```
+
+**Error `404`**
+
+```json
+{ "error": "Lead not found" }
+```
+
+---
+
+## 8b. Score breakdown only
+
+```http
+GET /api/leads/:id/score
+```
+
+Returns `{ leadId, scoreBreakdown }` — recomputed on each request (deterministic, no LLM). Use for the lead detail **Score** tab.
 
 **Error `404`**
 
@@ -739,10 +766,14 @@ Recommended order for a new lead: **PATCH snapshot** → review `suggestedEmail`
 
 ## Not implemented yet
 
+Tracked in **[docs/NOT_IMPLEMENTED.md](./docs/NOT_IMPLEMENTED.md)** (living backlog — update when gaps are found).
+
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/uploads/:id/progress` | SSE upload/profiling progress |
-| `POST` | `/api/events` | Engagement webhooks |
+| `POST` | `/api/events` | Generic engagement webhooks |
+
+Also not in this repo: **frontend** Emails/Outreach UI, Pipeline Analytics charts, lead timeline UI. Backend APIs for those exist — see the backlog doc.
 
 See `BACKEND_FLOW_UNDERSTANDING.md` for full product behavior.
 

@@ -1,6 +1,18 @@
 export type LeadTier = "hot" | "warm" | "cold";
 export type LeadIntent = "high" | "medium" | "low";
 
+export interface ScoreBreakdownItem {
+  signal: string;
+  points: number;
+  met: boolean;
+}
+
+export interface ScoreBreakdown {
+  total: number;
+  tier: LeadTier;
+  breakdown: ScoreBreakdownItem[];
+}
+
 export interface Lead {
   id: string;
   category_id: string | null;
