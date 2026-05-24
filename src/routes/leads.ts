@@ -14,6 +14,10 @@ import {
 } from "../services/snapshotService";
 import { sendSuggestedEmailFromSnapshot } from "../services/leadEmailService";
 import { listLeadEmailHistory } from "../services/email/outreachEmailService";
+import {
+  exportUserLeadsXlsx,
+  getUploadTemplateXlsx,
+} from "../services/leadExportService";
 import type { LeadTier } from "../types/lead";
 
 export const leadsRouter = Router();
@@ -22,6 +26,43 @@ function leadIdParam(req: Request): string {
   const id = req.params.id;
   return Array.isArray(id) ? id[0] : id;
 }
+
+function sendXlsxDownload(
+  res: Response,
+  buffer: Buffer,
+  filename: string
+): void {
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(buffer);
+}
+
+/** Blank/sample upload template — same columns as POST /api/leads/upload expects */
+leadsRouter.get("/upload/template", async (req: Request, res: Response) => {
+  try {
+    const includeSamples = req.query.samples !== "false";
+    const buffer = getUploadTemplateXlsx(includeSamples);
+    sendXlsxDownload(res, buffer, "leads_upload_template.xlsx");
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to generate upload template" });
+  }
+});
+
+/** Export this user's leads as .xlsx (re-uploadable shape) */
+leadsRouter.get("/export", async (req: Request, res: Response) => {
+  try {
+    const buffer = await exportUserLeadsXlsx(req.user!.id);
+    const date = new Date().toISOString().slice(0, 10);
+    sendXlsxDownload(res, buffer, `leads_export_${date}.xlsx`);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to export leads" });
+  }
+});
 
 leadsRouter.post(
   "/upload",

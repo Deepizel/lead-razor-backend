@@ -49,6 +49,8 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `PATCH` | `/api/categories/:id` | Update a category |
 | `GET` | `/api/leads` | List leads (`?tier=&sort=`) |
 | `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
+| `GET` | `/api/leads/upload/template` | Download upload template (`.xlsx`) |
+| `GET` | `/api/leads/export` | Download all leads as `.xlsx` |
 | `GET` | `/api/leads/:id` | Lead detail + snapshot |
 | `GET` | `/api/leads/:id/score` | Score breakdown checklist only |
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
@@ -426,6 +428,52 @@ Content-Type: multipart/form-data
 ```
 
 Upserts by **email**. Scores each lead immediately. LLM profiling runs **async** when `OPENAI_API_KEY` is set.
+
+---
+
+## 7b. Download upload template
+
+```http
+GET /api/leads/upload/template
+Authorization: Bearer <accessToken>
+```
+
+**Query**
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `samples` | included | `samples=false` → headers only, no example rows |
+
+**Success `200`** — `.xlsx` file download (`Content-Disposition: attachment`)
+
+Sheet **Leads Upload Template** with columns:
+
+`first_name`, `last_name`, `email`, `company`, `job_title`, `phone`, `source`, `initial_message`, `business_detail`, `category_id`
+
+Same shape as upload expects; includes 5 example rows by default.
+
+**Frontend example**
+
+```ts
+const res = await fetch(`${API_BASE}/api/leads/upload/template`, {
+  headers: { Authorization: `Bearer ${accessToken}` },
+});
+const blob = await res.blob();
+// trigger browser download from blob
+```
+
+---
+
+## 7c. Export leads (Excel)
+
+```http
+GET /api/leads/export
+Authorization: Bearer <accessToken>
+```
+
+**Success `200`** — `.xlsx` download of **all leads for the signed-in user**, same columns as the upload template (re-uploadable).
+
+Filename: `leads_export_YYYY-MM-DD.xlsx`
 
 ---
 
