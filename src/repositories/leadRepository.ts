@@ -208,8 +208,9 @@ export async function upsertLeadFromRow(
     await recordLeadCreated(userId, lead.id, scored.tier, uploadId ?? undefined);
   }
 
-  };
+  return { lead: scored, isNew: !existing };
 }
+
 
 export interface CreateLeadInput {
   first_name: string;
