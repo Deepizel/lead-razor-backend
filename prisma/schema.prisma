@@ -108,6 +108,7 @@ model Lead {
   email            String    @db.VarChar(255)
   company          String?   @db.VarChar(255)
   jobTitle         String?   @map("job_title") @db.VarChar(255)
+  linkedinUrl      String?   @map("linkedin_url") @db.VarChar(500)
   phone            String?   @db.VarChar(50)
   source           String?   @db.VarChar(100)
   initialMessage   String?   @map("initial_message")

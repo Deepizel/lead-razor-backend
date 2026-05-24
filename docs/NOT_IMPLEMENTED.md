@@ -22,7 +22,7 @@
 | **Score breakdown tab UI** | Checklist of scoring signals on lead detail | `GET /api/leads/:id` → `scoreBreakdown`, or `GET /api/leads/:id/score` | React UI not in this repo |
 | **Emails / Outreach view** | Compose tab, sent outbox, drill-down | APIs ready: `POST /api/emails/*`, `GET /api/emails` | React UI not in this repo |
 | **Lead email timeline UI** | Event timeline on lead detail | `GET /api/leads/:id/emails` | UI not built |
-| **Pipeline Analytics charts** | Donut, movement, engagement KPIs | `GET /api/analytics/pipeline` | UI not built |
+| **Report modal UI** | Category, date range, limit, blob download | `GET /api/reports/export` | React UI not in this repo |
 | **Bulk compose UX** | Pick hot leads by category, preview count | `POST /api/emails/recipients/preview` | UI not built |
 
 ---
@@ -88,6 +88,7 @@ See also: [PIPELINE_ANALYTICS.md](./PIPELINE_ANALYTICS.md)
 | Item | Completed | Notes |
 |------|-----------|--------|
 | **Deterministic score breakdown** | 2026-05-22 | `calculateScoreWithBreakdown`, `scoreBreakdown` on lead detail, `GET /api/leads/:id/score` |
+| **Filtered report export** | 2026-05-22 | `GET /api/reports/export`, `linkedin_url` on leads |
 | Pipeline analytics API | 2026-05-20 | `GET /api/analytics/pipeline`, uploads + events tables |
 | Outreach send + tracking | 2026-05-21 | `sent_emails`, SMTP/Resend, pixel, click, read APIs |
 | Auth bypass (auto-verify) | 2026-05-21 | Temporary until Resend auth configured |
