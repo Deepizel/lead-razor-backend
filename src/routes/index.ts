@@ -5,6 +5,7 @@ import { leadsRouter } from "./leads";
 import { analyticsRouter } from "./analytics";
 import { emailsRouter } from "./emails";
 import { reportsRouter } from "./reports";
+import { settingsRouter } from "./settings";
 import { trackingRouter } from "./tracking";
 import { resendWebhookRouter } from "./webhooks/resend";
 import { authenticate } from "../middleware/authenticate";
@@ -30,5 +31,6 @@ protectedRouter.use("/leads", leadsRouter);
 protectedRouter.use("/analytics", analyticsRouter);
 protectedRouter.use("/emails", emailsRouter);
 protectedRouter.use("/reports", reportsRouter);
+protectedRouter.use("/settings", settingsRouter);
 
 apiRouter.use(protectedRouter);

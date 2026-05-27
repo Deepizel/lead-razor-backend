@@ -21,6 +21,8 @@ Access tokens expire in **5 minutes**. Use `POST /api/auth/refresh` with the ref
 
 See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 
+For a categorized list of everything working today, see **`docs/FEATURES_INTEGRATED.md`**.
+
 ---
 
 ## Implemented endpoints
@@ -58,15 +60,23 @@ See **`docs/AUTH_UNDERSTANDING.md`** for full auth flows.
 | `GET` | `/api/leads/:id/score` | Score breakdown checklist only |
 | `PATCH` | `/api/leads/:id` | Update a lead (rescored) |
 | `PATCH` | `/api/leads/:id/snapshot` | Regenerate LLM snapshot (incl. suggested email) |
-| `POST` | `/api/leads/:id/email/send` | Send suggested email via Resend |
+| `POST` | `/api/leads/:id/email/send` | Send suggested email (optional `emailIdentityId` in body) |
 | `GET` | `/api/analytics/pipeline` | Pipeline dashboard aggregations (`?days=30`) |
+| `GET` | `/api/settings/email-identities` | List sending identities (masked credentials) |
+| `GET` | `/api/settings/email-identity` | Default sending identity |
+| `POST` | `/api/settings/email-identities` | Create sending identity (encrypts credentials) |
+| `PATCH` | `/api/settings/email-identities/:id` | Update identity |
+| `DELETE` | `/api/settings/email-identities/:id` | Delete identity |
+| `POST` | `/api/settings/email-identities/:id/default` | Set default sender |
+| `POST` | `/api/settings/email-identities/:id/test` | Test send |
 | `POST` | `/api/emails/draft` | Draft subject/body from lead snapshot |
-| `POST` | `/api/emails/send` | Send outreach (one lead or bulk) |
-| `GET` | `/api/emails` | Outbox — all sent emails |
-| `GET` | `/api/emails/:id` | Sent email detail + tracking |
+| `POST` | `/api/emails/send` | Send outreach (optional `emailIdentityId`; uses default if omitted) |
+| `GET` | `/api/emails` | Outbox (`?emailIdentityId=` filter) |
+| `GET` | `/api/emails/:id` | Sent email detail + tracking + `emailIdentity` |
 | `GET` | `/api/leads/:id/emails` | Lead email timeline |
 
-See **`docs/EMAIL_OUTREACH.md`** for env vars, tracking URLs, and webhooks.
+See **`docs/EMAIL_IDENTITIES.md`** for per-user senders and **frontend checklist**.  
+See **`docs/EMAIL_OUTREACH.md`** for tracking URLs and webhooks.
 
 ---
 

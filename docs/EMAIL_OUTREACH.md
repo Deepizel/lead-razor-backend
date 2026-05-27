@@ -1,28 +1,22 @@
 # Email outreach & tracking
 
-Provider-agnostic outreach with first-party open/click tracking. Auth emails (verify/reset) still use `authEmailService` + Resend.
+Outreach **sends through per-user email identities** (see [EMAIL_IDENTITIES.md](./EMAIL_IDENTITIES.md)). First-party open/click tracking uses `APP_URL`. Auth emails (verify/reset) still use `authEmailService` + Resend.
 
 ## Environment
 
 ```env
-EMAIL_PROVIDER=gmail          # gmail | resend
-APP_URL=https://your-api.com  # required for tracking pixel & click URLs
+EMAIL_CREDENTIALS_ENCRYPTION_KEY=<64-char-hex>  # required for identity storage
+APP_URL=https://your-api.com                    # tracking pixel & click URLs
 
-# Gmail (demo)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=you@gmail.com
-SMTP_PASS=app-password
-SMTP_FROM=you@gmail.com
-
-# Resend (custom domain)
+# Auth mail only (optional)
 RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=sales@yourdomain.com
+RESEND_FROM_EMAIL=noreply@yourdomain.com
 RESEND_WEBHOOK_SECRET=optional-shared-secret
 ```
 
-Check flags: `GET /api/health/config` → `outreachEmail`, `emailProvider`.
+Users configure SMTP/Resend/Brevo credentials via `POST /api/settings/email-identities` (encrypted in DB).
+
+Check flags: `GET /api/health/config` → `emailCredentialsEncryption`.
 
 ## API (authenticated unless noted)
 

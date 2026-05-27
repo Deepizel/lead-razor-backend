@@ -256,9 +256,16 @@ leadsRouter.patch("/:id/snapshot", async (req: Request, res: Response) => {
 
 leadsRouter.post("/:id/email/send", async (req: Request, res: Response) => {
   try {
+    const body = req.body ?? {};
+    const emailIdentityId =
+      typeof body.emailIdentityId === "string"
+        ? body.emailIdentityId.trim()
+        : undefined;
+
     const result = await sendSuggestedEmailFromSnapshot(
       req.user!.id,
-      leadIdParam(req)
+      leadIdParam(req),
+      emailIdentityId
     );
     res.status(200).json({
       status: "sent",
@@ -270,7 +277,11 @@ leadsRouter.post("/:id/email/send", async (req: Request, res: Response) => {
     let status = 500;
     if (message.includes("not found")) status = 404;
     if (message.includes("No suggested") || message.includes("required")) status = 400;
-    if (message.includes("Missing required environment")) status = 503;
+    if (
+      message.includes("Missing required environment") ||
+      message.includes("No sending identity")
+    )
+      status = message.includes("No sending identity") ? 400 : 503;
     if (message.includes("RESEND") || message.includes("Resend") || message.includes("SMTP")) status = 502;
     res.status(status).json({ error: message });
   }
