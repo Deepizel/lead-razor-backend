@@ -12,6 +12,7 @@
 - **Move** items to “Recently completed” when shipped (with date + PR/commit if helpful).
 - **Do not** delete historical items without a note — strike through or move to completed instead.
 - Cross-link from `API_REFERENCE.md` and feature docs when relevant.
+- **Integrated features** live in [FEATURES_INTEGRATED.md](./FEATURES_INTEGRATED.md) (opposite of this backlog).
 
 ---
 
@@ -21,6 +22,7 @@
 |------|----------------|---------------|--------|
 | **Score breakdown tab UI** | Checklist of scoring signals on lead detail | `GET /api/leads/:id` → `scoreBreakdown`, or `GET /api/leads/:id/score` | React UI not in this repo |
 | **Emails / Outreach view** | Compose tab, sent outbox, drill-down | APIs ready: `POST /api/emails/*`, `GET /api/emails` | React UI not in this repo |
+| **Email identities settings UI** | Add/edit/test multiple senders | `GET/POST /api/settings/email-identities` | See `EMAIL_IDENTITIES.md` FE checklist |
 | **Lead email timeline UI** | Event timeline on lead detail | `GET /api/leads/:id/emails` | UI not built |
 | **Report modal UI** | Category, date range, limit, blob download | `GET /api/reports/export` | React UI not in this repo |
 | **Bulk compose UX** | Pick hot leads by category, preview count | `POST /api/emails/recipients/preview` | UI not built |
@@ -34,7 +36,8 @@
 | **Gmail reply polling** | Auto-detect replies when using SMTP | Open/click via pixel + wrap only | Needs Gmail API (or IMAP) + background job + thread match |
 | **`POST /api/events`** | Generic engagement webhook | Trackers + Resend inbound only | Could delegate to `eventIngestionService` |
 | **Per-lead merge fields in bulk send** | Same template, personalized names | Bulk send uses one subject/body for all | v1 limitation |
-| **Auth mail via SMTP** | Signup/reset through Gmail | Auth still uses Resend in `authEmailService.ts` | Outreach uses SMTP/Resend switch; auth separate |
+| **Auth mail via SMTP** | Signup/reset through Gmail | Auth still uses Resend in `authEmailService.ts` | Outreach uses per-user identities; auth separate |
+| **Per-identity Resend inbound webhooks** | Reply routing per API key | Platform `RESEND_WEBHOOK_SECRET` only | Multi-tenant reply matching |
 | **Resend delivery/bounce webhooks** | Bounce handling | Inbound reply webhook only | Optional hardening |
 | **Simulate reply (dev)** | Test reply KPI without ESP | Manual DB or future `/api/events` | — |
 
@@ -87,6 +90,7 @@ See also: [PIPELINE_ANALYTICS.md](./PIPELINE_ANALYTICS.md)
 
 | Item | Completed | Notes |
 |------|-----------|--------|
+| **Per-user email identities** | 2026-05-23 | Multi-sender, encrypted creds, default + override on send |
 | **Deterministic score breakdown** | 2026-05-22 | `calculateScoreWithBreakdown`, `scoreBreakdown` on lead detail, `GET /api/leads/:id/score` |
 | **Filtered report export** | 2026-05-22 | `GET /api/reports/export`, `linkedin_url` on leads |
 | Pipeline analytics API | 2026-05-20 | `GET /api/analytics/pipeline`, uploads + events tables |

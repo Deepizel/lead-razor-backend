@@ -5,6 +5,7 @@ import type { TrackedLink } from "../types/email";
 export async function createSentEmail(input: {
   userId: string;
   leadId: string;
+  emailIdentityId?: string | null;
   provider: string;
   subject: string;
   bodyHtml: string;
@@ -15,6 +16,7 @@ export async function createSentEmail(input: {
     data: {
       userId: input.userId,
       leadId: input.leadId,
+      emailIdentityId: input.emailIdentityId ?? null,
       provider: input.provider,
       subject: input.subject,
       bodyHtml: input.bodyHtml,
@@ -86,6 +88,15 @@ export async function findSentEmailForUser(userId: string, id: string) {
           company: true,
         },
       },
+      emailIdentity: {
+        select: {
+          id: true,
+          label: true,
+          fromName: true,
+          fromEmail: true,
+          providerType: true,
+        },
+      },
     },
   });
 }
@@ -99,13 +110,16 @@ export async function listSentEmailsForUser(
     tier?: string;
     opened?: boolean;
     replied?: boolean;
+    emailIdentityId?: string;
   } = {}
 ) {
-  const { limit = 50, offset = 0, leadId, tier, opened, replied } = options;
+  const { limit = 50, offset = 0, leadId, tier, opened, replied, emailIdentityId } =
+    options;
 
   const where: Prisma.SentEmailWhereInput = {
     userId,
     ...(leadId ? { leadId } : {}),
+    ...(emailIdentityId ? { emailIdentityId } : {}),
     ...(opened === true ? { firstOpenedAt: { not: null } } : {}),
     ...(opened === false ? { firstOpenedAt: null } : {}),
     ...(replied === true ? { repliedAt: { not: null } } : {}),
@@ -129,6 +143,15 @@ export async function listSentEmailsForUser(
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        emailIdentity: {
+          select: {
+            id: true,
+            label: true,
+            fromName: true,
+            fromEmail: true,
+            providerType: true,
           },
         },
       },

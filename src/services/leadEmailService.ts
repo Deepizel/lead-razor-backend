@@ -10,12 +10,14 @@ export interface SendSuggestedEmailResult {
 /** Sends snapshot-suggested copy via the provider-agnostic outreach pipeline. */
 export async function sendSuggestedEmailFromSnapshot(
   userId: string,
-  leadId: string
+  leadId: string,
+  emailIdentityId?: string | null
 ): Promise<SendSuggestedEmailResult> {
   const result = await sendOutreachToLead({
     userId,
     leadId,
     useSnapshot: true,
+    emailIdentityId,
   });
 
   return {

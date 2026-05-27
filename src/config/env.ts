@@ -51,6 +51,8 @@ export const env = {
   appUrl: optionalEnv("APP_URL", "http://localhost:5000"),
   /** If set, email links open the frontend which calls the API */
   frontendUrl: optionalEnv("FRONTEND_URL"),
+  /** 32-byte key (64 hex chars) or passphrase — encrypts per-user outreach credentials in DB */
+  emailCredentialsEncryptionKey: optionalEnv("EMAIL_CREDENTIALS_ENCRYPTION_KEY"),
 };
 
 export function assertDatabaseConfigured(): void {
@@ -66,7 +68,7 @@ export function assertResendConfigured(): void {
   requireEnv("RESEND_FROM_EMAIL");
 }
 
-/** Outreach emails (not auth mail) */
+/** Legacy server-wide outreach (optional if users configure email_identities) */
 export function assertOutreachEmailConfigured(): void {
   if (env.emailProvider === "resend") {
     assertResendConfigured();
@@ -75,6 +77,14 @@ export function assertOutreachEmailConfigured(): void {
   requireEnv("SMTP_USER");
   requireEnv("SMTP_PASS");
   requireEnv("SMTP_FROM");
+}
+
+export function assertEmailCredentialsEncryptionConfigured(): void {
+  requireEnv("EMAIL_CREDENTIALS_ENCRYPTION_KEY");
+}
+
+export function isEmailCredentialsEncryptionConfigured(): boolean {
+  return Boolean(readEnv("EMAIL_CREDENTIALS_ENCRYPTION_KEY"));
 }
 
 export function assertAuthConfigured(): void {
@@ -87,6 +97,7 @@ export type ConfigStatus = {
   resend: boolean;
   outreachEmail: boolean;
   emailProvider: EmailProvider;
+  emailCredentialsEncryption: boolean;
 };
 
 /** Non-secret flags for debugging deploy vs local .env mismatches */
@@ -105,6 +116,7 @@ export function getConfigStatus(): ConfigStatus {
     resend: Boolean(readEnv("RESEND_API_KEY") && readEnv("RESEND_FROM_EMAIL")),
     outreachEmail,
     emailProvider: provider,
+    emailCredentialsEncryption: isEmailCredentialsEncryptionConfigured(),
   };
 }
 

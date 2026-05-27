@@ -12,6 +12,14 @@ export interface EmailTimelineEvent {
   metadata?: Record<string, unknown>;
 }
 
+export interface SentEmailIdentityRef {
+  id: string;
+  label: string;
+  fromName: string;
+  fromEmail: string;
+  providerType: string;
+}
+
 export interface SentEmailListItem {
   id: string;
   leadId: string;
@@ -26,6 +34,7 @@ export interface SentEmailListItem {
   replied: boolean;
   repliedAt: string | null;
   status: SentEmailStatus;
+  emailIdentity: SentEmailIdentityRef | null;
 }
 
 export interface SentEmailDetail {
@@ -42,6 +51,7 @@ export interface SentEmailDetail {
   sentAt: string | null;
   provider: string;
   status: SentEmailStatus;
+  emailIdentity: SentEmailIdentityRef | null;
   tracking: {
     opened: boolean;
     firstOpenedAt: string | null;
@@ -71,5 +81,6 @@ export interface LeadEmailHistoryItem {
   replySnippet: string | null;
   previewText: string;
   status: SentEmailStatus;
+  emailIdentity: SentEmailIdentityRef | null;
   events: EmailTimelineEvent[];
 }

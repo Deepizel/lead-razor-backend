@@ -16,7 +16,14 @@ function emailError(res: Response, err: unknown, fallback: string): void {
   if (isMissingEnvError(err)) {
     res.status(503).json({
       error: message,
-      hint: "Set EMAIL_PROVIDER and SMTP_* (gmail) or RESEND_* (custom domain) on this server.",
+      hint: "Set EMAIL_CREDENTIALS_ENCRYPTION_KEY and configure a sending identity under Settings → Email identities.",
+    });
+    return;
+  }
+  if (message.includes("No sending identity")) {
+    res.status(400).json({
+      error: message,
+      hint: "POST /api/settings/email-identities to add a sender, then set one as default.",
     });
     return;
   }
@@ -83,12 +90,18 @@ emailsRouter.post("/send", async (req: Request, res: Response) => {
     const useSnapshot = body.useSnapshot === true;
 
     if (typeof body.leadId === "string" && body.leadId.trim()) {
+      const emailIdentityId =
+        typeof body.emailIdentityId === "string"
+          ? body.emailIdentityId.trim()
+          : undefined;
+
       const result = await sendOutreachToLead({
         userId,
         leadId: body.leadId.trim(),
         subject: typeof body.subject === "string" ? body.subject : undefined,
         body: typeof body.body === "string" ? body.body : undefined,
         useSnapshot,
+        emailIdentityId,
       });
       res.status(200).json({ status: "sent", ...result });
       return;
@@ -113,7 +126,18 @@ emailsRouter.post("/send", async (req: Request, res: Response) => {
       return;
     }
 
-    const result = await sendOutreachToLeads(userId, leadIds, subject, textBody);
+    const emailIdentityId =
+      typeof body.emailIdentityId === "string"
+        ? body.emailIdentityId.trim()
+        : undefined;
+
+    const result = await sendOutreachToLeads({
+      userId,
+      leadIds,
+      subject,
+      body: textBody,
+      emailIdentityId,
+    });
     res.status(200).json({ status: "completed", ...result });
   } catch (err) {
     emailError(res, err, "Send failed");
@@ -143,6 +167,10 @@ emailsRouter.get("/", async (req: Request, res: Response) => {
         : req.query.replied === "false"
           ? false
           : undefined;
+    const emailIdentityId =
+      typeof req.query.emailIdentityId === "string"
+        ? req.query.emailIdentityId
+        : undefined;
 
     const data = await listOutreachEmails(req.user!.id, {
       limit: Number.isNaN(limit) ? 50 : limit,
@@ -150,6 +178,7 @@ emailsRouter.get("/", async (req: Request, res: Response) => {
       tier,
       opened,
       replied,
+      emailIdentityId,
     });
     res.json(data);
   } catch (err) {

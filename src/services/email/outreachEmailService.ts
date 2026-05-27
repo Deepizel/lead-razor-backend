@@ -1,4 +1,3 @@
-import { assertOutreachEmailConfigured, env } from "../../config/env";
 import { getLeadById } from "../../repositories/leadRepository";
 import {
   createSentEmail,
@@ -17,14 +16,20 @@ import {
 } from "../../repositories/snapshotRepository";
 import { prisma } from "../../db/prisma";
 import { ingestEmailSent } from "../eventIngestionService";
-import { getOutreachEmailProvider } from "./emailProvider";
-import { buildTrackedEmailBodies } from "./trackingService";
+import {
+  buildBodiesForSend,
+  identitySummaryFromRow,
+  resolveEmailIdentityForSend,
+  type SentEmailIdentitySummary,
+} from "../emailIdentityService";
+import { sendWithEmailIdentity, providerNameForIdentity } from "./identityTransport";
 import type {
   LeadEmailHistoryItem,
   SentEmailDetail,
   SentEmailListItem,
 } from "../../types/email";
 import type { EmailTimelineEvent } from "../../types/email";
+import type { EmailIdentityRow } from "../../repositories/emailIdentityRepository";
 
 const SENT_EMAIL_HEADER = "X-Razor-Sent-Email-Id";
 
@@ -34,11 +39,22 @@ export interface SendOutreachOptions {
   subject?: string;
   body?: string;
   useSnapshot?: boolean;
+  /** Omit to use the user's default sending identity */
+  emailIdentityId?: string | null;
+}
+
+export interface SendOutreachBatchOptions {
+  userId: string;
+  leadIds: string[];
+  subject: string;
+  body: string;
+  emailIdentityId?: string | null;
 }
 
 export interface SendOutreachBatchResult {
   sent: Array<{ leadId: string; sentEmailId: string }>;
   failed: Array<{ leadId: string; error: string }>;
+  emailIdentityId: string;
 }
 
 export async function draftEmailFromSnapshot(
@@ -57,10 +73,38 @@ export async function draftEmailFromSnapshot(
   };
 }
 
+function mapIdentityFromInclude(
+  identity: {
+    id: string;
+    label: string;
+    fromName: string;
+    fromEmail: string;
+    providerType: string;
+  } | null
+): SentEmailIdentitySummary | null {
+  if (!identity) return null;
+  return {
+    id: identity.id,
+    label: identity.label,
+    fromName: identity.fromName,
+    fromEmail: identity.fromEmail,
+    providerType: identity.providerType,
+  };
+}
+
 export async function sendOutreachToLead(
   options: SendOutreachOptions
-): Promise<{ sentEmailId: string; leadId: string; to: string; subject: string }> {
-  assertOutreachEmailConfigured();
+): Promise<{
+  sentEmailId: string;
+  leadId: string;
+  to: string;
+  subject: string;
+  emailIdentityId: string;
+}> {
+  const identity = await resolveEmailIdentityForSend(
+    options.userId,
+    options.emailIdentityId
+  );
 
   const lead = await getLeadById(options.userId, options.leadId);
   if (!lead) throw new Error(`Lead not found: ${options.leadId}`);
@@ -78,20 +122,22 @@ export async function sendOutreachToLead(
     throw new Error("subject and body are required (or use useSnapshot: true)");
   }
 
-  const provider = getOutreachEmailProvider();
+  const provider = providerNameForIdentity(identity.providerType);
   const pending = await createSentEmail({
     userId: options.userId,
     leadId: options.leadId,
-    provider: provider.name,
+    emailIdentityId: identity.id,
+    provider,
     subject,
     bodyHtml: "",
     bodyText: body,
   });
 
-  const { html, text, links } = buildTrackedEmailBodies(
+  const { html, text, links } = buildBodiesForSend(
     pending.id,
     subject,
-    body
+    body,
+    identity.trackingEnabled
   );
 
   await prisma.sentEmail.update({
@@ -100,7 +146,7 @@ export async function sendOutreachToLead(
   });
 
   try {
-    const { messageId } = await provider.send({
+    const { messageId } = await sendWithEmailIdentity(identity, {
       to: lead.email,
       subject,
       html,
@@ -120,6 +166,7 @@ export async function sendOutreachToLead(
       leadId: options.leadId,
       to: lead.email,
       subject,
+      emailIdentityId: identity.id,
     };
   } catch (err) {
     await markSentEmailFailed(pending.id);
@@ -128,21 +175,24 @@ export async function sendOutreachToLead(
 }
 
 export async function sendOutreachToLeads(
-  userId: string,
-  leadIds: string[],
-  subject: string,
-  body: string
+  options: SendOutreachBatchOptions
 ): Promise<SendOutreachBatchResult> {
+  const identity = await resolveEmailIdentityForSend(
+    options.userId,
+    options.emailIdentityId
+  );
+
   const sent: SendOutreachBatchResult["sent"] = [];
   const failed: SendOutreachBatchResult["failed"] = [];
 
-  for (const leadId of leadIds) {
+  for (const leadId of options.leadIds) {
     try {
       const result = await sendOutreachToLead({
-        userId,
+        userId: options.userId,
         leadId,
-        subject,
-        body,
+        subject: options.subject,
+        body: options.body,
+        emailIdentityId: identity.id,
       });
       sent.push({ leadId, sentEmailId: result.sentEmailId });
     } catch (err) {
@@ -153,7 +203,7 @@ export async function sendOutreachToLeads(
     }
   }
 
-  return { sent, failed };
+  return { sent, failed, emailIdentityId: identity.id };
 }
 
 async function buildTimelineForSentEmail(
@@ -211,6 +261,7 @@ export async function getSentEmailDetail(
     sentAt: row.sentAt?.toISOString() ?? null,
     provider: row.provider,
     status: row.status as SentEmailDetail["status"],
+    emailIdentity: mapIdentityFromInclude(row.emailIdentity),
     tracking: {
       opened: Boolean(row.firstOpenedAt),
       firstOpenedAt: row.firstOpenedAt?.toISOString() ?? null,
@@ -235,6 +286,7 @@ export async function listOutreachEmails(
     tier?: string;
     opened?: boolean;
     replied?: boolean;
+    emailIdentityId?: string;
   }
 ): Promise<{ emails: SentEmailListItem[]; total: number }> {
   const { emails, total } = await listSentEmailsForUser(userId, query);
@@ -255,6 +307,7 @@ export async function listOutreachEmails(
       replied: Boolean(row.repliedAt),
       repliedAt: row.repliedAt?.toISOString() ?? null,
       status: row.status as SentEmailListItem["status"],
+      emailIdentity: mapIdentityFromInclude(row.emailIdentity),
     })),
   };
 }
@@ -267,6 +320,21 @@ export async function listLeadEmailHistory(
   if (!lead) throw new Error(`Lead not found: ${leadId}`);
 
   const rows = await listSentEmailsForLead(userId, leadId);
+  const identityIds = [
+    ...new Set(
+      rows.map((r) => r.emailIdentityId).filter((id): id is string => Boolean(id))
+    ),
+  ];
+  const identityRows =
+    identityIds.length > 0
+      ? await prisma.emailIdentity.findMany({
+          where: { userId, id: { in: identityIds } },
+        })
+      : [];
+  const identityById = new Map(
+    identityRows.map((r) => [r.id, identitySummaryFromRow(r as EmailIdentityRow)])
+  );
+
   const items: LeadEmailHistoryItem[] = [];
 
   for (const row of rows) {
@@ -285,6 +353,9 @@ export async function listLeadEmailHistory(
       replySnippet: row.replySnippet,
       previewText: previewText(row.bodyText),
       status: row.status as LeadEmailHistoryItem["status"],
+      emailIdentity: row.emailIdentityId
+        ? identityById.get(row.emailIdentityId) ?? null
+        : null,
       events,
     });
   }
