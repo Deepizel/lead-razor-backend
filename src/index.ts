@@ -5,6 +5,9 @@ import { apiRouter } from "./routes";
 
 const app = express();
 
+/** Required on Render/Heroku so rate limits use client IP from X-Forwarded-For */
+app.set("trust proxy", 1);
+
 app.use(cors());
 app.use(express.json());
 

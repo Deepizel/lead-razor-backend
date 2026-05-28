@@ -18,7 +18,14 @@ export async function authenticate(
     const payload = verifyAccessToken(token);
     const user = await getUserById(payload.sub);
     if (!user) {
-      res.status(401).json({ error: "User not found" });
+      res.status(401).json({ error: "User not found or deactivated" });
+      return;
+    }
+    if (user.status === "pending") {
+      res.status(403).json({
+        error:
+          "Account setup incomplete. Set your password using the link from your approval email.",
+      });
       return;
     }
     req.user = user;

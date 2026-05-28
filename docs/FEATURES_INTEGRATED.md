@@ -14,6 +14,7 @@ For gaps and deferred work, see [NOT_IMPLEMENTED.md](./NOT_IMPLEMENTED.md). For 
 - **Health**
   - `GET /` — plain-text liveness (`Leads AI Backend Running`)
   - `GET /api/health/config` — which secrets are configured (no values returned): DB, JWT, OpenAI, outreach email provider
+- **Rate limiting** — tiered limits on auth, API, send, tracking, webhooks (`docs/RATE_LIMITING.md`); `trust proxy` for Render
 - **Render / production** — deployable with migrations; see `RENDER_DEPLOY.md` and `render.yaml`
 
 **Required env (minimum):** `DATABASE_URL`, `JWT_SECRET`  

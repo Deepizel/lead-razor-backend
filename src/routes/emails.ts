@@ -8,6 +8,7 @@ import {
   sendOutreachToLeads,
 } from "../services/email/outreachEmailService";
 import { isMissingEnvError } from "../config/env";
+import { sendRateLimiter } from "../middleware/rateLimit";
 
 export const emailsRouter = Router();
 
@@ -83,7 +84,7 @@ emailsRouter.post("/recipients/preview", async (req: Request, res: Response) => 
 });
 
 /** Send to one or many leads */
-emailsRouter.post("/send", async (req: Request, res: Response) => {
+emailsRouter.post("/send", sendRateLimiter, async (req: Request, res: Response) => {
   try {
     const body = req.body ?? {};
     const userId = req.user!.id;

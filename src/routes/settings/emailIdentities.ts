@@ -14,6 +14,7 @@ import type {
   CreateEmailIdentityInput,
   UpdateEmailIdentityInput,
 } from "../../types/emailIdentity";
+import { sendRateLimiter } from "../../middleware/rateLimit";
 
 export const emailIdentitiesRouter = Router();
 
@@ -163,7 +164,7 @@ emailIdentitiesRouter.post("/:id/default", async (req: Request, res: Response) =
   }
 });
 
-emailIdentitiesRouter.post("/:id/test", async (req: Request, res: Response) => {
+emailIdentitiesRouter.post("/:id/test", sendRateLimiter, async (req: Request, res: Response) => {
   try {
     const to =
       typeof req.body?.to === "string" ? req.body.to : undefined;

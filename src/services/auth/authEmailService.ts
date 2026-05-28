@@ -25,6 +25,13 @@ function resetLink(token: string): string {
   return `${env.appUrl.replace(/\/$/, "")}/api/auth/reset-password?token=${token}`;
 }
 
+function waitlistSetupLink(token: string): string {
+  if (env.frontendUrl) {
+    return `${env.frontendUrl.replace(/\/$/, "")}/waitlist/set-password?token=${token}`;
+  }
+  return `${env.appUrl.replace(/\/$/, "")}/api/waitlist/set-password?token=${token}`;
+}
+
 export async function sendVerificationEmail(
   to: string,
   token: string
@@ -72,5 +79,33 @@ export async function sendPasswordResetEmail(
 
   if (error) {
     throw new Error(`Failed to send reset email: ${error.message}`);
+  }
+}
+
+export async function sendWaitlistSetupEmail(
+  to: string,
+  firstName: string,
+  token: string
+): Promise<void> {
+  const link = waitlistSetupLink(token);
+  const resend = getResend();
+  const name = firstName.trim() || "there";
+
+  const { error } = await resend.emails.send({
+    from: env.resendFromEmail,
+    to: [to],
+    subject: "You're approved — set your Lead Qualifier password",
+    html: `
+      <p>Hi ${name},</p>
+      <p>Your waitlist application has been approved. Click below to set your password and access your account:</p>
+      <p><a href="${link}">Set your password</a></p>
+      <p>This link expires in <strong>24 hours</strong>.</p>
+      <p style="color:#666;font-size:12px;">Or copy: ${link}</p>
+    `,
+    text: `Hi ${name},\n\nYour application was approved. Set your password: ${link}\n\nThis link expires in 24 hours.`,
+  });
+
+  if (error) {
+    throw new Error(`Failed to send waitlist setup email: ${error.message}`);
   }
 }

@@ -53,6 +53,13 @@ export const env = {
   frontendUrl: optionalEnv("FRONTEND_URL"),
   /** 32-byte key (64 hex chars) or passphrase — encrypts per-user outreach credentials in DB */
   emailCredentialsEncryptionKey: optionalEnv("EMAIL_CREDENTIALS_ENCRYPTION_KEY"),
+  rateLimitEnabled: process.env.RATE_LIMIT_ENABLED !== "false",
+  rateLimitWindowMs: Number(process.env.RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000),
+  rateLimitMaxAuth: Number(process.env.RATE_LIMIT_MAX_AUTH ?? 30),
+  rateLimitMaxApi: Number(process.env.RATE_LIMIT_MAX_API ?? 300),
+  rateLimitMaxTracking: Number(process.env.RATE_LIMIT_MAX_TRACKING ?? 2000),
+  rateLimitMaxWebhook: Number(process.env.RATE_LIMIT_MAX_WEBHOOK ?? 120),
+  rateLimitMaxSend: Number(process.env.RATE_LIMIT_MAX_SEND ?? 40),
 };
 
 export function assertDatabaseConfigured(): void {
