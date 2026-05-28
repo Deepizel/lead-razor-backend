@@ -40,6 +40,28 @@ For a categorized list of everything working today, see **`docs/FEATURES_INTEGRA
 | `POST` | `/api/auth/reset-password` | Set new password with token |
 | `GET` | `/api/auth/me` | Current user (requires Bearer) |
 
+### Waitlist (public)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/waitlist` | Join waitlist (firstName, lastName, email, businessIndustry) |
+| `GET` | `/api/waitlist/set-password?token=` | Validate setup token |
+| `POST` | `/api/waitlist/set-password` | Set password after approval (`token`, `password`) |
+
+See **`docs/WAITLIST.md`**.
+
+### Admin (`role: admin` only)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/admin/waitlist` | List waitlist entries |
+| `POST` | `/api/admin/waitlist/:id/approve` | Approve → email 24h setup link |
+| `POST` | `/api/admin/waitlist/:id/reject` | Reject application |
+| `GET` | `/api/admin/users` | List all users |
+| `POST` | `/api/admin/users/:id/approve` | Activate user account |
+| `POST` | `/api/admin/users/:id/deactivate` | Deactivate user |
+| `PATCH` | `/api/admin/users/:id/role` | Set `admin` or `user` |
+
 ### App (requires auth + verified email)
 
 | Method | Path | Description |

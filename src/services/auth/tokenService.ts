@@ -55,3 +55,10 @@ export function passwordResetExpiresAt(): Date {
   d.setHours(d.getHours() + 1);
   return d;
 }
+
+/** Waitlist invite — set initial password (24 hours) */
+export function passwordSetupExpiresAt(): Date {
+  const d = new Date();
+  d.setHours(d.getHours() + 24);
+  return d;
+}

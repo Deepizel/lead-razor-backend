@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma";
 import type { AuthTokensResponse, AuthUser } from "../../types/auth";
+import type { UserRole, UserStatus } from "../../types/waitlist";
 import {
   hashPassword,
   validatePasswordStrength,
@@ -21,12 +22,38 @@ function toAuthUser(user: {
   id: string;
   email: string;
   emailVerifiedAt: Date | null;
+  role: string;
+  status: string;
+  firstName: string | null;
+  lastName: string | null;
 }): AuthUser {
   return {
     id: user.id,
     email: user.email,
     emailVerified: Boolean(user.emailVerifiedAt),
+    role: user.role as UserRole,
+    status: user.status as UserStatus,
+    firstName: user.firstName,
+    lastName: user.lastName,
   };
+}
+
+function assertCanLogin(user: {
+  status: string;
+  passwordHash: string | null;
+}): void {
+  if (user.status === "deactivated") {
+    const err = new Error("This account has been deactivated.");
+    (err as Error & { statusCode?: number }).statusCode = 403;
+    throw err;
+  }
+  if (user.status === "pending" || !user.passwordHash) {
+    const err = new Error(
+      "Account setup is incomplete. Use the link in your approval email to set your password."
+    );
+    (err as Error & { statusCode?: number }).statusCode = 403;
+    throw err;
+  }
 }
 
 async function issueTokens(user: AuthUser): Promise<AuthTokensResponse> {
@@ -43,11 +70,7 @@ async function issueTokens(user: AuthUser): Promise<AuthTokensResponse> {
     accessToken: signAccessToken(user),
     refreshToken,
     expiresIn: "5m",
-    user: {
-      id: user.id,
-      email: user.email,
-      emailVerified: user.emailVerified,
-    },
+    user,
   };
 }
 
@@ -90,6 +113,8 @@ export async function signup(
   const user = await prisma.user.create({
     data: {
       email: normalizedEmail,
+      role: "user",
+      status: "active",
       ...verifiedUserData(passwordHash),
     },
   });
@@ -130,9 +155,15 @@ export async function login(
     where: { email: normalizedEmail },
   });
 
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  if (!user || !user.passwordHash) {
     throw new Error("Invalid email or password");
   }
+
+  if (!(await verifyPassword(password, user.passwordHash))) {
+    throw new Error("Invalid email or password");
+  }
+
+  assertCanLogin(user);
 
   if (!user.emailVerifiedAt && AUTO_VERIFY_EMAIL) {
     const updated = await prisma.user.update({
@@ -172,6 +203,8 @@ export async function refresh(
     }
     throw new Error("Invalid or expired refresh token");
   }
+
+  assertCanLogin(record.user);
 
   await prisma.refreshToken.delete({ where: { id: record.id } });
 
@@ -258,5 +291,8 @@ export async function resetPassword(
 
 export async function getUserById(id: string): Promise<AuthUser | null> {
   const user = await prisma.user.findUnique({ where: { id } });
-  return user ? toAuthUser(user) : null;
+  if (!user || user.status === "deactivated") {
+    return null;
+  }
+  return toAuthUser(user);
 }

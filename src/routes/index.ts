@@ -6,6 +6,8 @@ import { analyticsRouter } from "./analytics";
 import { emailsRouter } from "./emails";
 import { reportsRouter } from "./reports";
 import { settingsRouter } from "./settings";
+import { waitlistRouter } from "./waitlist";
+import { adminRouter } from "./admin";
 import { trackingRouter } from "./tracking";
 import { resendWebhookRouter } from "./webhooks/resend";
 import { authenticate } from "../middleware/authenticate";
@@ -29,6 +31,7 @@ apiRouter.get("/health/config", (_req, res) => {
 });
 
 apiRouter.use("/auth", authRateLimiter, authRouter);
+apiRouter.use("/waitlist", waitlistRouter);
 
 const protectedRouter = Router();
 protectedRouter.use(authenticate);
@@ -39,5 +42,6 @@ protectedRouter.use("/analytics", analyticsRouter);
 protectedRouter.use("/emails", emailsRouter);
 protectedRouter.use("/reports", reportsRouter);
 protectedRouter.use("/settings", settingsRouter);
+protectedRouter.use("/admin", adminRouter);
 
 apiRouter.use(protectedRouter);

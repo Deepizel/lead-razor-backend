@@ -31,7 +31,9 @@ function authError(res: Response, err: unknown, fallback: string): void {
         ? 400
         : message.includes("Invalid email or password")
           ? 401
-          : message.includes("not verified")
+          : message.includes("not verified") ||
+              message.includes("deactivated") ||
+              message.includes("setup is incomplete")
             ? 403
             : 500;
   res.status(status).json({ error: message });
