@@ -71,7 +71,7 @@ See **`docs/WAITLIST.md`**.
 | `GET` | `/api/categories/:id` | Get one category by ID |
 | `POST` | `/api/categories` | Create a category |
 | `PATCH` | `/api/categories/:id` | Update a category |
-| `GET` | `/api/leads` | List leads (`?tier=&sort=`) |
+| `GET` | `/api/leads` | List leads (`?tier=&sort=&categoryId=&source=`) |
 | `POST` | `/api/leads` | Create one lead (form JSON) |
 | `POST` | `/api/leads/upload` | Upload `.xlsx` — create/update leads |
 | `GET` | `/api/leads/upload/template` | Download upload template (`.xlsx`) |
@@ -411,13 +411,15 @@ POST /api/categories
 ## 6. List leads
 
 ```http
-GET /api/leads?tier=hot&sort=score
+GET /api/leads?tier=hot&sort=score&categoryId=<uuid>&source=referral
 ```
 
 | Query | Values | Default |
 |-------|--------|---------|
 | `tier` | `hot`, `warm`, `cold` | all |
 | `sort` | `score`, `created_at` | `score` |
+| `categoryId` | Category UUID, or `null` / `uncategorized` for leads with no category | all |
+| `source` | Exact match on lead `source` (e.g. `referral`, `LinkedIn`) | all |
 
 **Success `200`**
 

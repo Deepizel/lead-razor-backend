@@ -136,10 +136,38 @@ leadsRouter.post("/", async (req: Request, res: Response) => {
   }
 });
 
+function parseCategoryIdQuery(raw: unknown): string | null | undefined {
+  if (raw === undefined || raw === null || raw === "") {
+    return undefined;
+  }
+  if (typeof raw !== "string") {
+    throw new Error("categoryId must be a UUID, null, or uncategorized");
+  }
+  const value = raw.trim();
+  if (value === "null" || value === "uncategorized") {
+    return null;
+  }
+  return value;
+}
+
 leadsRouter.get("/", async (req: Request, res: Response) => {
   try {
     const tier = req.query.tier as string | undefined;
     const sort = req.query.sort as string | undefined;
+    const source =
+      typeof req.query.source === "string" && req.query.source.trim()
+        ? req.query.source.trim()
+        : undefined;
+
+    let categoryId: string | null | undefined;
+    try {
+      categoryId = parseCategoryIdQuery(req.query.categoryId);
+    } catch {
+      res.status(400).json({
+        error: "categoryId must be a UUID, null, or uncategorized",
+      });
+      return;
+    }
 
     if (tier && !["hot", "warm", "cold"].includes(tier)) {
       res.status(400).json({ error: "tier must be hot, warm, or cold" });
@@ -153,12 +181,16 @@ leadsRouter.get("/", async (req: Request, res: Response) => {
     const leads = await listLeads(req.user!.id, {
       tier: tier as LeadTier | undefined,
       sort: (sort as "score" | "created_at") ?? "score",
+      categoryId,
+      source,
     });
 
     res.json({ leads });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to list leads" });
+    const message = err instanceof Error ? err.message : "Failed to list leads";
+    const status = message.includes("Category not found") ? 400 : 500;
+    res.status(status).json({ error: message });
   }
 });
 
