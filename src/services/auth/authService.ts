@@ -31,8 +31,8 @@ function toAuthUser(user: {
     id: user.id,
     email: user.email,
     emailVerified: Boolean(user.emailVerifiedAt),
-    role: user.role as UserRole,
-    status: user.status as UserStatus,
+    role: (user.role || "user") as UserRole,
+    status: (user.status || "active") as UserStatus,
     firstName: user.firstName,
     lastName: user.lastName,
   };

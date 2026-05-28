@@ -2,10 +2,12 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { env, assertAuthConfigured } from "../../config/env";
 import type { AuthUser } from "../../types/auth";
+import type { UserRole } from "../../types/waitlist";
 
 export interface AccessTokenPayload {
   sub: string;
   email: string;
+  role: UserRole;
   type: "access";
 }
 
@@ -22,6 +24,7 @@ export function signAccessToken(user: AuthUser): string {
   const payload: AccessTokenPayload = {
     sub: user.id,
     email: user.email,
+    role: user.role,
     type: "access",
   };
   return jwt.sign(payload, env.jwtSecret, {

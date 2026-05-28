@@ -200,9 +200,19 @@ POST /api/auth/login
   "accessToken": "eyJ...",
   "refreshToken": "hex...",
   "expiresIn": "5m",
-  "user": { "id": "uuid", "email": "...", "emailVerified": true }
+  "user": {
+    "id": "uuid",
+    "email": "you@company.com",
+    "emailVerified": true,
+    "role": "user",
+    "status": "active",
+    "firstName": "Jane",
+    "lastName": "Doe"
+  }
 }
 ```
+
+`role` is `"admin"` or `"user"`. The JWT payload also includes `role` (decode access token or use `user.role` from this response). Same `user` shape on signup, refresh, and `GET /api/auth/me`.
 
 ### Refresh (call ~every 4 minutes while app is open)
 
