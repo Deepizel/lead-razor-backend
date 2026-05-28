@@ -20,6 +20,7 @@ import {
   getUploadTemplateXlsx,
 } from "../services/leadExportService";
 import type { LeadTier } from "../types/lead";
+import { sendRateLimiter } from "../middleware/rateLimit";
 
 export const leadsRouter = Router();
 
@@ -254,7 +255,7 @@ leadsRouter.patch("/:id/snapshot", async (req: Request, res: Response) => {
   }
 });
 
-leadsRouter.post("/:id/email/send", async (req: Request, res: Response) => {
+leadsRouter.post("/:id/email/send", sendRateLimiter, async (req: Request, res: Response) => {
   try {
     const body = req.body ?? {};
     const emailIdentityId =
