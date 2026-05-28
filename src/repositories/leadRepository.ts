@@ -29,6 +29,10 @@ async function applyScoreWithEvents(
 export interface ListLeadsOptions {
   tier?: LeadTier;
   sort?: "score" | "created_at";
+  /** Filter by category UUID, or `null` for leads with no category */
+  categoryId?: string | null;
+  /** Exact match on `leads.source` */
+  source?: string;
 }
 
 export interface LeadListItem extends Lead {
@@ -40,10 +44,23 @@ export async function listLeads(
   userId: string,
   options: ListLeadsOptions = {}
 ): Promise<LeadListItem[]> {
-  const { tier, sort = "score" } = options;
+  const { tier, sort = "score", categoryId, source } = options;
+
+  if (categoryId) {
+    const cat = await prisma.category.findFirst({
+      where: { id: categoryId, userId },
+    });
+    if (!cat) throw new Error("Category not found");
+  }
 
   const leads = await prisma.lead.findMany({
-    where: { userId, ...(tier ? { tier } : {}) },
+    where: {
+      userId,
+      ...(tier ? { tier } : {}),
+      ...(categoryId === null ? { categoryId: null } : {}),
+      ...(categoryId ? { categoryId } : {}),
+      ...(source ? { source } : {}),
+    },
     orderBy:
       sort === "created_at" ? { createdAt: "desc" } : { score: "desc" },
     include: {
