@@ -1,5 +1,5 @@
-import type { Request, Response } from "express";
-import rateLimit, { type Options, type RateLimitRequestHandler } from "express-rate-limit";
+import type { Request, RequestHandler, Response } from "express";
+import rateLimit, { type Options } from "express-rate-limit";
 import { env } from "../config/env";
 
 function clientIp(req: Request): string {
@@ -13,7 +13,7 @@ function clientIp(req: Request): string {
 function standardHandler(
   message: string
 ): Options["handler"] {
-  return (req, res: Response) => {
+  return (req:Request, res: Response) => {
     const retryAfter = res.getHeader("Retry-After");
     res.status(429).json({
       error: message,
@@ -25,7 +25,7 @@ function standardHandler(
   };
 }
 
-function createLimiter(options: Partial<Options>): RateLimitRequestHandler {
+function createLimiter(options: Partial<Options>): RequestHandler {
   if (!env.rateLimitEnabled) {
     return (_req, _res, next) => next();
   }
@@ -34,7 +34,7 @@ function createLimiter(options: Partial<Options>): RateLimitRequestHandler {
     windowMs: env.rateLimitWindowMs,
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => clientIp(req),
+    keyGenerator: (req:Request) => clientIp(req),
     ...options,
   });
 }
@@ -60,7 +60,7 @@ export const webhookRateLimiter = createLimiter({
 /** Authenticated API — per user when available, else IP */
 export const apiRateLimiter = createLimiter({
   max: env.rateLimitMaxApi,
-  keyGenerator: (req) => {
+  keyGenerator: (req:Request) => {
     const userId = req.user?.id;
     if (userId) return `user:${userId}`;
     return `ip:${clientIp(req)}`;
@@ -71,7 +71,7 @@ export const apiRateLimiter = createLimiter({
 /** Email send & identity test — stricter per user/IP */
 export const sendRateLimiter = createLimiter({
   max: env.rateLimitMaxSend,
-  keyGenerator: (req) => {
+  keyGenerator: (req:Request) => {
     const userId = req.user?.id;
     if (userId) return `send:user:${userId}`;
     return `send:ip:${clientIp(req)}`;
